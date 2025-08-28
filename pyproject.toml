@@ -1,0 +1,31 @@
+[project]
+name = "paperank"
+version = "0.1.0"
+description = "A publication ranking and citation network analysis tools."
+authors = [
+    { name = "Roberto Rossi", email = "robros@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "requests>=2.25",
+    "tqdm>=4.62",
+    "urllib3>=1.26"
+]
+
+[project.urls]
+Homepage = "https://github.com/gwr3n/paperank"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests", "tests.*"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

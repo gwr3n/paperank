@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+build/
+dist/
+misc/
+tmp/
+.vscode/
+*.egg-info/
+*.egg
+.vscode/settings.json
+
+.DS_Store
+.coverage
