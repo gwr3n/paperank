@@ -6,6 +6,8 @@
 
 For a discussion on the use of PageRank-like scores beyond the web see [Gleich, 2014](https://arxiv.org/abs/1407.5107).
 
+[Use cases](docs/Use%20cases.md).
+
 ---
 
 ## Features
