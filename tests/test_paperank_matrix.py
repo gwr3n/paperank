@@ -1,10 +1,12 @@
 import unittest
 import scipy.sparse
 import numpy as np
+import warnings
 from paperank.paperank_matrix import (
     adjacency_to_stochastic_matrix,
     apply_random_jump,
-    compute_publication_rank
+    compute_publication_rank,
+    compute_publication_rank_teleport,
 )
 
 class TestPapeRankMatrix(unittest.TestCase):
@@ -286,6 +288,86 @@ class TestPapeRankMatrix(unittest.TestCase):
         r = compute_publication_rank(G, tol=1e-12, max_iter=100, init=init)
         self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-10))
         self.assertTrue(r[0] < 1.0)  # Should have spread out
+
+    def test_numpy_array_input(self):
+        # Integer numpy adjacency with a dangling row
+        A = np.array([
+            [0, 1, 1],
+            [0, 0, 0],  # dangling
+            [1, 0, 0],
+        ], dtype=int)
+        S = adjacency_to_stochastic_matrix(A)
+        self.assertIsInstance(S, scipy.sparse.csr_matrix)
+        row_sums = np.array(S.sum(axis=1)).ravel()
+        self.assertTrue(np.isclose(row_sums[0], 1.0))
+        self.assertTrue(np.isclose(row_sums[1], 0.0))
+        self.assertTrue(np.isclose(row_sums[2], 1.0))
+
+    def test_teleport_on_all_dangling(self):
+        # All-zero (all dangling) matrix should yield teleport vector as stationary distribution
+        n = 5
+        S = scipy.sparse.csr_matrix((n, n))
+        v = np.array([0.10, 0.20, 0.30, 0.40, 0.0], dtype=float)
+        v /= v.sum()
+        r = compute_publication_rank_teleport(S, alpha=0.85, teleport=v, tol=1e-14, max_iter=100)
+        self.assertTrue(np.allclose(r, v, atol=1e-12))
+
+    def test_custom_teleport_influences_rank(self):
+        # Small chain graph: 0->1, 1->2
+        rows = np.array([0, 1])
+        cols = np.array([1, 2])
+        data = np.ones_like(rows)
+        A = scipy.sparse.csr_matrix((data, (rows, cols)), shape=(3, 3))
+        S = adjacency_to_stochastic_matrix(A)
+        r_uniform = compute_publication_rank_teleport(S, alpha=0.85, teleport=None, tol=1e-14, max_iter=1000)
+        v = np.array([0.8, 0.1, 0.1], dtype=float)
+        v /= v.sum()
+        r_biased = compute_publication_rank_teleport(S, alpha=0.85, teleport=v, tol=1e-14, max_iter=1000)
+        self.assertTrue(np.isclose(r_uniform.sum(), 1.0))
+        self.assertTrue(np.isclose(r_biased.sum(), 1.0))
+        # Teleport bias should change the stationary distribution
+        self.assertFalse(np.allclose(r_uniform, r_biased))
+
+    def test_negative_entries_raise(self):
+        # Build a small adjacency with a negative entry
+        rows = np.array([0, 1])
+        cols = np.array([1, 0])
+        data = np.array([1.0, -1.0])  # negative entry
+        A = scipy.sparse.csr_matrix((data, (rows, cols)), shape=(2, 2))
+        with self.assertRaises(ValueError):
+            adjacency_to_stochastic_matrix(A)
+
+    def test_apply_random_jump_deprecation_warning(self):
+        # Small matrix is fine; ensure deprecation warning is emitted
+        A = np.array([[0, 1], [1, 0]], dtype=int)
+        S = adjacency_to_stochastic_matrix(A)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _ = apply_random_jump(S, alpha=0.85)
+            self.assertTrue(any(issubclass(wi.category, DeprecationWarning) for wi in w))
+
+    def test_teleport_convergence_small_graph(self):
+        # Triangle graph 0->1,1->2,2->0
+        rows = np.array([0, 1, 2])
+        cols = np.array([1, 2, 0])
+        data = np.ones(3)
+        A = scipy.sparse.csr_matrix((data, (rows, cols)), shape=(3, 3))
+        S = adjacency_to_stochastic_matrix(A)
+        r = compute_publication_rank_teleport(S, alpha=0.85, tol=1e-14, max_iter=1000)
+        self.assertTrue(np.isclose(r.sum(), 1.0))
+        # By symmetry, ranks should be equal
+        self.assertTrue(np.allclose(r, np.full(3, 1/3)))
+
+    def test_apply_random_jump_dense_warning_estimate(self):
+        # Moderate N to trigger memory warning message
+        n = 100
+        A = scipy.sparse.csr_matrix((n, n))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _ = apply_random_jump(adjacency_to_stochastic_matrix(A), alpha=0.85)
+            # Either DeprecationWarning or user warning for dense materialization expected
+            cats = [wi.category for wi in w]
+            self.assertTrue(any(issubclass(c, (DeprecationWarning, UserWarning)) for c in cats))
 
 if __name__ == "__main__":
     unittest.main()

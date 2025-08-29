@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from paperank.citation_matrix import build_citation_sparse_matrix
 from paperank.citation_crawler import get_citation_neighborhood
 
@@ -30,6 +31,15 @@ class TestCitationMatrix(unittest.TestCase):
         self.assertIsInstance(doi_to_idx, dict)
         self.assertEqual(matrix.shape[0], len(doi_to_idx))
         self.assertEqual(matrix.shape[1], len(doi_to_idx))
+
+    @patch("paperank.citation_matrix.get_cited_dois", side_effect=Exception("network down"))
+    @patch("paperank.citation_matrix.get_citing_dois", side_effect=Exception("network down"))
+    def test_build_matrix_with_network_failures(self, *_):
+        doi_list = [self.test_doi]
+        matrix, mapping = build_citation_sparse_matrix(doi_list, max_workers=None, progress=False)
+        self.assertEqual(matrix.shape, (1, 1))
+        self.assertEqual(matrix.nnz, 0)
+        self.assertIn(self.test_doi, mapping)
 
 if __name__ == "__main__":
     unittest.main()

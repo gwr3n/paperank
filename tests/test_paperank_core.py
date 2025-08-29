@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 import os
+from unittest.mock import patch
 from paperank.paperank_core import (
     rank,
     rank_and_save_publications_JSON,
@@ -44,6 +45,25 @@ class TestPapeRankCore(unittest.TestCase):
                 lines = f.readlines()
             self.assertTrue(lines[0].startswith("rank,doi,score,authors,title,year"))
             self.assertTrue(any("10.1016/j.ejor.2016.12.001" in line for line in lines))
+
+    @patch("paperank.paperank_core.get_work_metadata")
+    @patch("paperank.paperank_core.extract_authors_title_year")
+    def test_rank_and_save_publications_CSV_quoting(self, mock_extract, mock_meta):
+        # Provide titles/authors with commas, quotes, and newlines
+        mock_meta.return_value = {"message": {}}
+        mock_extract.side_effect = [
+            (["Doe, John"], "A \"Complex\" Title, With Commas", 2020),
+            (["Alice\nBob"], "Another title", None),
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = os.path.join(tmpdir, "results.csv")
+            rank_and_save_publications_CSV(self.doi_list, out_path, alpha=self.alpha, max_results=2, progress=False)
+            with open(out_path, "r", encoding="utf-8") as f:
+                text = f.read()
+            # Expect quotes to be doubled and fields quoted
+            self.assertIn('"A ""Complex"" Title, With Commas"', text)
+            self.assertIn('"Doe, John"', text)
+            self.assertIn('"Alice\nBob"', text)
 
 if __name__ == "__main__":
     unittest.main()
