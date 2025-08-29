@@ -14,6 +14,7 @@ How to use:
   - Set the DOI of interest in `test_doi`.
   - Adjust `forward_steps` and `backward_steps` to control the size and depth of the citation network.
   - Choose the output format ("json" or "csv").
+  - Advanced: tune tol/max_iter; `teleport=None` uses uniform teleport.
   - Run the script to generate a file with ranked publication data for the citation neighborhood.
 
 This example is intended for demonstration, validation, and practical testing of the paperank package.
@@ -22,9 +23,11 @@ It can be adapted for batch analysis, integration into larger workflows, or as a
 
 from paperank.paperank_core import crawl_and_rank
 
+
 def main():
-    test_doi = "10.1016/j.ejor.2005.01.053" 
+    test_doi = "10.1016/j.ejor.2005.01.053"
     output_format = "json"  # Change to "csv" as needed
+    # Note: teleport vector must match the number of nodes; None ⇒ uniform teleport.
     crawl_and_rank(
         doi=test_doi,
         forward_steps=2,
@@ -32,8 +35,12 @@ def main():
         alpha=0.85,
         output_format=output_format,
         debug=False,
-        progress=True
+        progress=True,
+        tol=1e-12,
+        max_iter=20000,
+        teleport=None,
     )
+
 
 if __name__ == "__main__":
     main()
