@@ -83,6 +83,38 @@ This will:
 
 ---
 
+## Advanced Parameters
+
+You can fine-tune the PageRank iteration from `rank` and `crawl_and_rank`:
+
+- `tol`: Convergence tolerance (default `1e-12`).
+- `max_iter`: Maximum number of iterations (default `10000`).
+- `teleport`: Optional teleportation distribution (numpy array of size N), non-negative and summing to 1. If `None`, a uniform distribution is used.
+
+Example:
+
+```python
+results = crawl_and_rank(
+    doi=doi,
+    forward_steps=1,
+    backward_steps=1,
+    alpha=0.85,
+    tol=1e-12,
+    max_iter=20000,
+    teleport=None,
+)
+```
+
+---
+
+## Deprecated Function
+
+- `apply_random_jump` is deprecated. It materializes a dense Google matrix and is intended only for very small graphs.  
+  Prefer `compute_publication_rank_teleport`, which applies teleportation during iteration without building a dense matrix.  
+  If you already used `apply_random_jump`, pass the result to `compute_publication_rank` (not the teleport variant).
+
+---
+
 ## Main API
 
 - `crawl_and_rank`:  
@@ -126,7 +158,7 @@ This will:
 
 ## Example
 
-See `example.py` for a comprehensive script demonstrating the workflow.
+See `example.py` for a comprehensive script demonstrating the workflow (including advanced parameters).
 
 ---
 
