@@ -4,6 +4,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from .doi_utils import normalize_doi, doi_to_path_segment
 from typing import Dict, List, Any, Optional, Tuple
+from functools import lru_cache
+from threading import local
 
 def _session() -> requests.Session:
     """
@@ -27,8 +29,17 @@ def _session() -> requests.Session:
     })
     return s
 
-_S: requests.Session = _session()
+# Thread-local session for safe reuse in concurrency
+_TLS = local()
 
+def _get_session() -> requests.Session:
+    s = getattr(_TLS, "session", None)
+    if s is None:
+        s = _session()
+        _TLS.session = s
+    return s
+
+@lru_cache(maxsize=200_000)
 def get_work_metadata(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
     Retrieve metadata for a work from the Crossref API given a DOI.
@@ -38,7 +49,9 @@ def get_work_metadata(doi: str, timeout: int = 20) -> Dict[str, Any]:
         timeout: Timeout for the HTTP request in seconds.
 
     Returns:
-        dict: The Crossref metadata envelope for the work.
+        dict: A shallow copy of the Crossref metadata envelope for the work.
+        Both the top-level envelope and its 'message' dict (if present) are
+        shallow-copied to avoid accidental mutation of cached objects by callers.
 
     The returned JSON contains:
       - status: API response status.
@@ -85,9 +98,24 @@ def get_work_metadata(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
     doi_seg: str = doi_to_path_segment(doi)
     url: str = f"https://api.crossref.org/works/{doi_seg}"
-    response = _S.get(url, timeout=timeout)
+    response = _get_session().get(url, timeout=timeout)
     response.raise_for_status()
-    return response.json()
+    data: Any = response.json()
+    if isinstance(data, dict):
+        out = data.copy()
+        msg = out.get("message")
+        if isinstance(msg, dict):
+            out["message"] = msg.copy()
+        return out
+    return data
+
+# Cache management
+def clear_caches() -> None:
+    """Clear LRU cache for Crossref metadata requests."""
+    try:
+        get_work_metadata.cache_clear()
+    except Exception:
+        pass
 
 def get_cited_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
