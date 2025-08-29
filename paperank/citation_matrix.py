@@ -1,10 +1,11 @@
 import numpy as np
 import scipy.sparse as sp
-from typing import List, Dict, Tuple, Callable, Any, Optional
+from typing import List, Dict, Tuple, Callable, Any, Optional, Union, Literal
 
 from .crossref import get_cited_dois
 from .open_citations import get_citing_dois
 from .doi_utils import normalize_doi
+from .types import ProgressType
 
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -52,7 +53,7 @@ def build_citation_sparse_matrix(
     include_citing: bool = False,
     max_workers: Optional[int] = None,
     use_cache: bool = True,
-    progress: Optional[bool] = False
+    progress: ProgressType = False
 ) -> Tuple[sp.csr_matrix, Dict[str, int]]:
     """
     Build a sparse adjacency matrix representing the citation graph for a list of DOIs.
@@ -66,7 +67,7 @@ def build_citation_sparse_matrix(
         include_citing: If True, also fill edges from items that cite a DOI in the list.
         max_workers: If provided, fetch metadata concurrently with this many threads.
         use_cache: If True, memoize citation/citing lookups in-process (LRU).
-        progress: If truthy and tqdm is available, show a progress bar.
+        progress: If True or 'tqdm' and tqdm is available, show a progress bar.
 
     Returns:
         matrix: scipy.sparse.csr_matrix, shape (len(doi_list), len(doi_list)), adjacency matrix.
@@ -106,7 +107,7 @@ def build_citation_sparse_matrix(
         try:
             with ThreadPoolExecutor(max_workers=workers) as ex:
                 futures = {ex.submit(_job, d): d for d in doi_list}
-                if progress and tqdm is not None:
+                if (progress is True or progress == 'tqdm') and tqdm is not None:
                     pbar = tqdm(total=len(futures), desc="Fetching citations", unit="doi", leave=False)
                 for fut in as_completed(futures):
                     try:
@@ -122,7 +123,7 @@ def build_citation_sparse_matrix(
                 pbar.close()
     else:
         iterable = doi_list
-        if progress and tqdm is not None:
+        if (progress is True or progress == 'tqdm') and tqdm is not None:
             iterable = tqdm(doi_list, desc="Fetching citations", unit="doi", leave=False)
         for d in iterable:
             try:
