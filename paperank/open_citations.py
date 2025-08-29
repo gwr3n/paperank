@@ -3,6 +3,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from .doi_utils import normalize_doi, doi_to_path_segment
 from typing import Dict, List, Any
+from threading import local
 
 def _session() -> requests.Session:
     """
@@ -26,7 +27,15 @@ def _session() -> requests.Session:
     })
     return s
 
-_S: requests.Session = _session()
+# Thread-local session to safely reuse connections in concurrent calls
+_TLS = local()
+
+def _get_session() -> requests.Session:
+    s = getattr(_TLS, "session", None)
+    if s is None:
+        s = _session()
+        _TLS.session = s
+    return s
 
 def get_citing_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
@@ -57,7 +66,7 @@ def get_citing_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
     doi_seg: str = doi_to_path_segment(doi)
     url: str = f"https://opencitations.net/index/coci/api/v1/citations/{doi_seg}"
-    response = _S.get(url, timeout=timeout)
+    response = _get_session().get(url, timeout=timeout)
     response.raise_for_status()
     data: List[dict] = response.json() or []
     seen: set = set()
