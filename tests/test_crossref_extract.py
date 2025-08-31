@@ -87,5 +87,34 @@ class TestCrossrefExtract(unittest.TestCase):
         self.assertEqual(title, "Another")
         self.assertEqual(year, 1999)
 
+    def test_extract_title_fallback_to_short_title(self):
+        meta = {
+            "message": {
+                # No 'title' present; should fall back to short-title[0]
+                "short-title": ["Shorty"],
+                # Use alternate key 'date_parts' to ensure year extraction still works
+                "issued": {"date_parts": [[2018]]},
+                "author": [],
+            }
+        }
+        authors, title, year = extract_authors_title_year(meta)
+        self.assertEqual(authors, [])
+        self.assertEqual(title, "Shorty")
+        self.assertEqual(year, 2018)
+
+    def test_extract_title_fallback_to_subtitle_when_title_and_short_title_missing(self):
+        meta = {
+            "message": {
+                # No 'title' or 'short-title'; should fall back to subtitle[0]
+                "subtitle": ["Subbed"],
+                "published": {"date-parts": [[2005]]},
+                "author": [],
+            }
+        }
+        authors, title, year = extract_authors_title_year(meta)
+        self.assertEqual(authors, [])
+        self.assertEqual(title, "Subbed")
+        self.assertEqual(year, 2005)
+
 if __name__ == "__main__":
     unittest.main()
