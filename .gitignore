@@ -11,3 +11,4 @@ tmp/
 
 .DS_Store
 .coverage
+docs/Dev notes.md
