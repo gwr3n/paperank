@@ -1,12 +1,28 @@
 # paperank
 
+Core package badges:
+
+![Codecov (with branch)](https://img.shields.io/codecov/c/gh/gwr3n/paperank/main)
+ ![Python package](https://img.shields.io/github/actions/workflow/status/gwr3n/paperank/.github%2Fworkflows%2Fpython-package.yml) ![Lint and type-check](https://img.shields.io/github/actions/workflow/status/gwr3n/paperank/.github%2Fworkflows%2Flint-type.yml?branch=main&label=lint%20%2B%20type-check) [![PyPI](https://img.shields.io/pypi/v/paperank)](https://pypi.org/project/paperank/) [![Python versions](https://img.shields.io/pypi/pyversions/paperank)](https://pypi.org/project/paperank/) [![License](https://img.shields.io/github/license/gwr3n/paperank)](LICENSE) [![Downloads](https://static.pepy.tech/badge/paperank)](https://pepy.tech/project/paperank) [![Release](https://img.shields.io/github/v/release/gwr3n/paperank)](https://github.com/gwr3n/paperank/releases) [![Wheel](https://img.shields.io/pypi/wheel/paperank)](https://pypi.org/project/paperank/)
+
+Quality and tooling:
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black) [![Ruff](https://img.shields.io/badge/lint-ruff-1f79ff)](https://github.com/astral-sh/ruff) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/gwr3n/paperank?label=openssf%20scorecard)](https://securityscorecards.dev/viewer/?uri=github.com/gwr3n/paperank)
+<!-- [![pre-commit.ci](https://results.pre-commit.ci/badge/github/gwr3n/paperank/main.svg)](https://results.pre-commit.ci/latest/github/gwr3n/paperank/main)  -->
+
+Project/community:
+
+[![Issues](https://img.shields.io/github/issues/gwr3n/paperank)](https://github.com/gwr3n/paperank/issues) [![PRs](https://img.shields.io/github/issues-pr/gwr3n/paperank)](https://github.com/gwr3n/paperank/pulls) [![Stars](https://img.shields.io/github/stars/gwr3n/paperank?style=social)](https://github.com/gwr3n/paperank/stargazers)
+
+Docs:
+
+[![Docs](https://img.shields.io/badge/docs-site-blue)](https://github.com/gwr3n/paperank)
+
 **A Publication Ranking and Citation Network Analysis Tools**
 
-`paperank` is a Python package for analyzing scholarly impact using citation networks. It provides tools to build citation graphs from DOIs, compute PapeRank (a PageRank-like score), fetch publication metadata, and export ranked results. The package is designed for researchers, bibliometricians, and developers interested in quantifying publication influence within local or global citation networks.
+`paperank` is a Python package for analyzing scholarly impact using citation networks. It provides tools to build citation graphs from DOIs, compute PapeRank (a PageRank-like score), fetch publication metadata, and export ranked results. The package is designed for researchers, bibliometricians, and developers interested in quantifying publication influence within local or global citation networks ([use cases](docs/Use%20cases.md)).
 
-For a discussion on the use of PageRank-like scores beyond the web see [Gleich, 2014](https://arxiv.org/abs/1407.5107).
-
-[Use cases](docs/Use%20cases.md).
+For a discussion on the use of PageRank-like scores beyond the web see [[Gleich, 2014](https://arxiv.org/abs/1407.5107)].
 
 ---
 
