@@ -93,7 +93,8 @@ def apply_random_jump(stochastic_matrix: scipy.sparse.spmatrix, alpha: float = 0
         return scipy.sparse.csr_matrix((0, 0))
 
     # mypy-safe: CSR first, then dtype conversion, then dense
-    S = cast(scipy.sparse.spmatrix, stochastic_matrix).tocsr().astype(np.float64, copy=False).toarray()  # type: ignore[attr-defined]
+    S = cast(scipy.sparse.spmatrix, stochastic_matrix).tocsr()  # type: ignore[attr-defined]
+    S = S.astype(np.float64, copy=False).toarray()
 
     row_sums = S.sum(axis=1)
     zero_rows = row_sums == 0
