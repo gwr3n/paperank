@@ -250,19 +250,3 @@ def extract_authors_title_year(meta: Dict[str, Any]) -> Tuple[List[str], str, Op
     title_str: str = _first_title(m)
     year_val: Optional[int] = _year(m)
     return authors_list, title_str, year_val
-
-
-if __name__ == "__main__":
-    test_doi = "10.1016/j.ejor.2016.12.001"
-    test_type = "cited"
-
-    if test_type == "metadata":
-        result = get_work_metadata(test_doi)
-        print(f"Metadata for {test_doi}:")
-        print(result)
-    elif test_type == "cited":
-        cited = get_cited_dois(test_doi)
-        print(f"Cited DOIs by {test_doi}:")
-        print(cited)
-    else:
-        print("Unknown test type. Use 'metadata' or 'cited'.")
