@@ -1,12 +1,20 @@
 [project]
 name = "paperank"
-version = "0.2.2"
+version = "0.2.3"
 description = "A publication ranking and citation network analysis tools."
 authors = [
     { name = "Roberto Rossi", email = "robros@gmail.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
 license = { text = "MIT" }
 dependencies = [
     "numpy>=1.21",
