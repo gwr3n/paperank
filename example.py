@@ -23,7 +23,6 @@ It can be adapted for batch analysis, integration into larger workflows, or as a
 
 from paperank.paperank_core import crawl_and_rank_bidirectional_neighborhood, crawl_and_rank_frontier
 
-
 def main_crawl_and_rank_bidirectional_neighborhood():
     test_doi = "10.1016/j.ejor.2005.01.053"
     output_format = "json"  # Change to "csv" as needed

@@ -61,9 +61,25 @@ def crawl_and_rank_bidirectional_neighborhood(
     doi_list: List[str] = get_citation_neighborhood(doi, forward_steps=forward_steps, backward_steps=backward_steps)
 
     if output_format == "json":
-        rank_and_save_publications_JSON(doi_list, out_path=doi_filename + ".json", alpha=alpha, tol=tol, max_iter=max_iter, teleport=teleport)
+        rank_and_save_publications_JSON(
+            doi_list,
+            out_path=doi_filename + ".json",
+            alpha=alpha,
+            tol=tol,
+            max_iter=max_iter,
+            teleport=teleport,
+            progress=progress,  # pass through for parity
+        )
     elif output_format == "csv":
-        rank_and_save_publications_CSV(doi_list, out_path=doi_filename + ".csv", alpha=alpha, tol=tol, max_iter=max_iter, teleport=teleport)
+        rank_and_save_publications_CSV(
+            doi_list,
+            out_path=doi_filename + ".csv",
+            alpha=alpha,
+            tol=tol,
+            max_iter=max_iter,
+            teleport=teleport,
+            progress=progress,  # pass through for parity
+        )
     else:
         print(f"Unknown output format: {output_format}")
 
