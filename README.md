@@ -7,7 +7,10 @@ Core package badges:
 
 Quality and tooling:
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black) [![Ruff](https://img.shields.io/badge/lint-ruff-1f79ff)](https://github.com/astral-sh/ruff) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/gwr3n/paperank?label=openssf%20scorecard)](https://securityscorecards.dev/viewer/?uri=github.com/gwr3n/paperank)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black) [![Ruff](https://img.shields.io/badge/lint-ruff-1f79ff)](https://github.com/astral-sh/ruff) 
+
+<!-- [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/gwr3n/paperank?label=openssf%20scorecard)](https://securityscorecards.dev/viewer/?uri=github.com/gwr3n/paperank) -->
+
 <!-- [![pre-commit.ci](https://results.pre-commit.ci/badge/github/gwr3n/paperank/main.svg)](https://results.pre-commit.ci/latest/github/gwr3n/paperank/main)  -->
 
 Project/community:
