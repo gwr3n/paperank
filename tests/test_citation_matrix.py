@@ -73,5 +73,66 @@ class TestCitationMatrix(unittest.TestCase):
         doi = "10.5555/boom"
         self.assertEqual(_cached_citing(doi), tuple())
 
+    @patch("paperank.citation_matrix.get_citing_dois")
+    @patch("paperank.citation_matrix.get_cited_dois")
+    def test_include_citing_adds_edge_from_citer_to_target(self, mock_get_cited, mock_get_citing):
+        # Arrange: B cites A; both A and B are in the list
+        doi_a = "10.1000/a"
+        doi_b = "10.1000/b"
+
+        def citing_side_effect(doi):
+            if doi == doi_a:
+                return {"citing_dois": [doi_b]}
+            if doi == doi_b:
+                return {"citing_dois": []}
+            return {"citing_dois": []}
+
+        mock_get_citing.side_effect = citing_side_effect
+        mock_get_cited.return_value = {"cited_dois": []}
+
+        # Act
+        matrix, mapping = build_citation_sparse_matrix(
+            [doi_a, doi_b], include_citing=True, max_workers=None, progress=False
+        )
+
+        # Assert: Edge should be from B -> A (row=B, col=A)
+        idx_a = mapping[doi_a]
+        idx_b = mapping[doi_b]
+        rows, cols = matrix.nonzero()
+        edges = set(zip(rows, cols))
+        self.assertIn((idx_b, idx_a), edges)
+        self.assertEqual(matrix.nnz, 1)
+
+    @patch("paperank.citation_matrix.get_citing_dois")
+    @patch("paperank.citation_matrix.get_cited_dois")
+    def test_include_citing_ignores_citers_not_in_list(self, mock_get_cited, mock_get_citing):
+        # Arrange: citing list contains one DOI in-list (B) and one out-of-list (C)
+        doi_a = "10.1000/a"
+        doi_b = "10.1000/b"
+        doi_c = "10.1000/c"  # not included in doi_list
+
+        def citing_side_effect(doi):
+            if doi == doi_a:
+                return {"citing_dois": [doi_b, doi_c]}
+            if doi == doi_b:
+                return {"citing_dois": []}
+            return {"citing_dois": []}
+
+        mock_get_citing.side_effect = citing_side_effect
+        mock_get_cited.return_value = {"cited_dois": []}
+
+        # Act
+        matrix, mapping = build_citation_sparse_matrix(
+            [doi_a, doi_b], include_citing=True, max_workers=None, progress=False
+        )
+
+        # Assert: Only edge B -> A should be present; C is ignored (not in mapping)
+        idx_a = mapping[doi_a]
+        idx_b = mapping[doi_b]
+        rows, cols = matrix.nonzero()
+        edges = set(zip(rows, cols))
+        self.assertEqual(edges, {(idx_b, idx_a)})
+        self.assertEqual(matrix.nnz, 1)
+        
 if __name__ == "__main__":
     unittest.main()
