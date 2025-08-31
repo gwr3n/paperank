@@ -1,12 +1,15 @@
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, Any, Callable, Iterable
 
 from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
 
 try:
-    from tqdm import tqdm  # optional
+    from tqdm import tqdm as _tqdm  # optional
 except Exception:
-    tqdm = None
+    _tqdm = None  # type: ignore[assignment]
+# A safely-typed tqdm alias: Optional callable (guarded before use)
+tqdm: Optional[Callable[..., Iterable[Any]]] = _tqdm
+
 from functools import lru_cache
 
 from .types import ProgressType
