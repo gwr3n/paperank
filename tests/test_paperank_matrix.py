@@ -1,4 +1,7 @@
+import io
+import sys
 import unittest
+from contextlib import redirect_stdout, redirect_stderr
 import warnings
 
 import numpy as np
@@ -507,6 +510,103 @@ class TestPapeRankMatrix(unittest.TestCase):
             cats = [wi.category for wi in w]
             self.assertTrue(any(issubclass(c, (DeprecationWarning, UserWarning)) for c in cats))
 
+    # ===== Additional tests for compute_publication_rank_teleport error paths =====
+
+    def test_teleport_alpha_out_of_range_raises(self):
+        S = scipy.sparse.identity(2, format="csr", dtype=float)
+        with self.assertRaisesRegex(ValueError, r"alpha must be in \[0, 1\]"):
+            compute_publication_rank_teleport(S, alpha=-0.1)
+        with self.assertRaisesRegex(ValueError, r"alpha must be in \[0, 1\]"):
+            compute_publication_rank_teleport(S, alpha=1.1)
+
+    def test_teleport_non_square_matrix_raises(self):
+        S = scipy.sparse.csr_matrix(np.ones((2, 3), dtype=float))
+        with self.assertRaisesRegex(ValueError, r"must be square"):
+            compute_publication_rank_teleport(S)
+
+    def test_teleport_empty_matrix_returns_empty_array(self):
+        S = scipy.sparse.csr_matrix((0, 0), dtype=float)
+        r = compute_publication_rank_teleport(S)
+        self.assertIsInstance(r, np.ndarray)
+        self.assertEqual(r.shape, (0,))
+
+    def test_teleport_negative_entries_raise_value_error_sparse_and_dense(self):
+        # Sparse negative entry
+        data = np.array([1.0, -0.5, 0.5], dtype=float)
+        rows = np.array([0, 0, 1])
+        cols = np.array([0, 1, 1])
+        S_neg_sparse = scipy.sparse.csr_matrix((data, (rows, cols)), shape=(2, 2))
+        with self.assertRaisesRegex(ValueError, r"must be non-negative"):
+            compute_publication_rank_teleport(S_neg_sparse)
+
+        # Dense negative entry
+        S_neg_dense = np.array([[1.0, -0.1], [0.0, 0.0]], dtype=float)
+        with self.assertRaisesRegex(ValueError, r"must be non-negative"):
+            compute_publication_rank_teleport(S_neg_dense)
+
+    def test_teleport_non_finite_entries_raise_value_error(self):
+        S_nan = np.array([[1.0, np.nan], [0.0, 0.0]], dtype=float)
+        with self.assertRaisesRegex(ValueError, r"non-finite values"):
+            compute_publication_rank_teleport(S_nan)
+
+        S_inf = scipy.sparse.csr_matrix(np.array([[1.0, np.inf], [0.0, 0.0]], dtype=float))
+        with self.assertRaisesRegex(ValueError, r"non-finite values"):
+            compute_publication_rank_teleport(S_inf)
+
+    def test_teleport_rows_must_sum_to_1_or_0_otherwise_error(self):
+        # First row sums to 0.5 -> invalid; second row dangling -> OK
+        S = scipy.sparse.csr_matrix(np.array([[0.2, 0.3], [0.0, 0.0]], dtype=float))
+        with self.assertRaisesRegex(ValueError, r"rows must sum to 1 or 0"):
+            compute_publication_rank_teleport(S)
+
+    def test_teleport_vector_validation_errors(self):
+        S = scipy.sparse.identity(3, dtype=float, format="csr")
+
+        with self.assertRaisesRegex(ValueError, r"teleport has incompatible size"):
+            compute_publication_rank_teleport(S, teleport=np.array([1.0, 0.0], dtype=float))
+
+        with self.assertRaisesRegex(ValueError, r"teleport must be non-negative"):
+            compute_publication_rank_teleport(S, teleport=np.array([1.0, -0.5, 0.5], dtype=float))
+
+        with self.assertRaisesRegex(ValueError, r"teleport must sum to a positive value"):
+            compute_publication_rank_teleport(S, teleport=np.array([0.0, 0.0, 0.0], dtype=float))
+
+    def test_init_vector_validation_errors(self):
+        S = scipy.sparse.identity(3, dtype=float, format="csr")
+
+        with self.assertRaisesRegex(ValueError, r"init has incompatible size"):
+            compute_publication_rank_teleport(S, init=np.array([1.0, 0.0], dtype=float))
+
+        with self.assertRaisesRegex(ValueError, r"init must sum to a positive value"):
+            compute_publication_rank_teleport(S, init=np.array([0.0, 0.0, 0.0], dtype=float))
+        
+    def test_compute_publication_rank_teleport_progress_true(self):
+        # 2-node graph with a dangling node (node 1)
+        # 0 -> 1; 1 -> (no out-links)
+        adj = np.array([[0, 1],
+                        [0, 0]], dtype=float)
+        S = adjacency_to_stochastic_matrix(adj)
+
+        # Capture any progress output (tqdm or print fallback)
+        f_out, f_err = io.StringIO(), io.StringIO()
+        with redirect_stdout(f_out), redirect_stderr(f_err):
+            r = compute_publication_rank_teleport(
+                S,
+                alpha=0.85,
+                tol=1e-10,
+                max_iter=1000,
+                progress=True,  # exercise the progress=True path
+            )
+
+        # Basic correctness checks
+        self.assertEqual(r.shape, (2,))
+        self.assertTrue(np.all(r >= -1e-15))  # numerical guard
+        self.assertAlmostEqual(float(r.sum()), 1.0, places=12)
+
+        # Ensure we got some output or at least did not crash due to progress handling.
+        # Depending on environment (tqdm installed or not), output may be empty or not.
+        _ = f_out.getvalue()
+        _ = f_err.getvalue()
 
 if __name__ == "__main__":
     unittest.main()
