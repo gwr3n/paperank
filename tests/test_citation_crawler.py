@@ -1,13 +1,13 @@
 import unittest
 from unittest.mock import patch
 
+from paperank.citation_crawler import _with_progress  # added for testing tqdm path
 from paperank.citation_crawler import (
     clear_caches,
     collect_cited_recursive,
     collect_citing_recursive,
     crawl_citation_neighborhood,
     get_citation_neighborhood,
-    _with_progress,  # added for testing tqdm path
 )
 
 
@@ -159,7 +159,7 @@ class TestCitationCrawler(unittest.TestCase):
         # 'B' is added at top level; 'C' is appended inside dfs before early return.
         self.assertEqual(out, ["B", "C"])
         self.assertNotIn("D", out)
-    
+
     def test__with_progress_uses_tqdm_when_available(self):
         import types
 
@@ -205,6 +205,7 @@ class TestCitationCrawler(unittest.TestCase):
             # Should return the original iterable unchanged
             self.assertIs(wrapped, data)
             self.assertEqual(list(wrapped), data)
+
 
 if __name__ == "__main__":
     unittest.main()
