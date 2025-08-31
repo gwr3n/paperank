@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import patch
-from paperank.citation_matrix import build_citation_sparse_matrix
+
 from paperank.citation_crawler import get_citation_neighborhood
+from paperank.citation_matrix import build_citation_sparse_matrix
+
 
 class TestCitationMatrix(unittest.TestCase):
     def setUp(self):
@@ -11,20 +13,14 @@ class TestCitationMatrix(unittest.TestCase):
 
     def test_get_citation_neighborhood(self):
         doi_list = get_citation_neighborhood(
-            self.test_doi,
-            forward_steps=self.forward_steps,
-            backward_steps=self.backward_steps,
-            progress=False
+            self.test_doi, forward_steps=self.forward_steps, backward_steps=self.backward_steps, progress=False
         )
         self.assertIsInstance(doi_list, list)
         self.assertIn(self.test_doi, doi_list)
 
     def test_build_citation_sparse_matrix(self):
         doi_list = get_citation_neighborhood(
-            self.test_doi,
-            forward_steps=self.forward_steps,
-            backward_steps=self.backward_steps,
-            progress=False
+            self.test_doi, forward_steps=self.forward_steps, backward_steps=self.backward_steps, progress=False
         )
         matrix, doi_to_idx = build_citation_sparse_matrix(doi_list, max_workers=4, progress=True)
         self.assertIsNotNone(matrix)
@@ -40,6 +36,7 @@ class TestCitationMatrix(unittest.TestCase):
         self.assertEqual(matrix.shape, (1, 1))
         self.assertEqual(matrix.nnz, 0)
         self.assertIn(self.test_doi, mapping)
+
 
 if __name__ == "__main__":
     unittest.main()

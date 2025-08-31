@@ -1,11 +1,14 @@
-import requests
 import os
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from .doi_utils import normalize_doi, doi_to_path_segment
-from typing import Dict, List, Any, Optional, Tuple
 from functools import lru_cache
 from threading import local
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from .doi_utils import doi_to_path_segment, normalize_doi
+
 
 def _session() -> requests.Session:
     """
@@ -28,14 +31,18 @@ def _session() -> requests.Session:
     ua = f"paperank/0.1 (+https://github.com/gwr3n/paperank)"
     if email:
         ua = f"paperank/0.1 (mailto:{email}; +https://github.com/gwr3n/paperank)"
-    s.headers.update({
-        "User-Agent": ua,
-        "Accept": "application/json",
-    })
+    s.headers.update(
+        {
+            "User-Agent": ua,
+            "Accept": "application/json",
+        }
+    )
     return s
+
 
 # Thread-local session for safe reuse in concurrency
 _TLS = local()
+
 
 def _get_session() -> requests.Session:
     s = getattr(_TLS, "session", None)
@@ -43,6 +50,7 @@ def _get_session() -> requests.Session:
         s = _session()
         _TLS.session = s
     return s
+
 
 @lru_cache(maxsize=200_000)
 def get_work_metadata(doi: str, timeout: int = 20) -> Dict[str, Any]:
@@ -114,6 +122,7 @@ def get_work_metadata(doi: str, timeout: int = 20) -> Dict[str, Any]:
         return out
     return data
 
+
 # Cache management
 def clear_caches() -> None:
     """Clear LRU cache for Crossref metadata requests."""
@@ -121,6 +130,7 @@ def clear_caches() -> None:
         get_work_metadata.cache_clear()
     except Exception:
         pass
+
 
 def get_cited_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """
@@ -153,6 +163,7 @@ def get_cited_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
             cited_dois.append(d)
     return {"article_doi": normalize_doi(doi), "cited_dois": cited_dois}
 
+
 def extract_authors_title_year(meta: Dict[str, Any]) -> Tuple[List[str], str, Optional[int]]:
     """
     Extract authors (list of strings), title (string), and year (int or None) from
@@ -167,6 +178,7 @@ def extract_authors_title_year(meta: Dict[str, Any]) -> Tuple[List[str], str, Op
             title: Title string.
             year: Year as int, or None if not found.
     """
+
     def _first_title(m: Dict[str, Any]) -> str:
         title = m.get("title")
         if isinstance(title, list) and title:
@@ -232,9 +244,10 @@ def extract_authors_title_year(meta: Dict[str, Any]) -> Tuple[List[str], str, Op
     year_val: Optional[int] = _year(m)
     return authors_list, title_str, year_val
 
+
 if __name__ == "__main__":
     test_doi = "10.1016/j.ejor.2016.12.001"
-    test_type = "cited"  
+    test_type = "cited"
 
     if test_type == "metadata":
         result = get_work_metadata(test_doi)

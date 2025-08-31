@@ -1,9 +1,11 @@
 import unittest
 from unittest.mock import patch
+
 import requests
 
+from paperank.crossref import get_cited_dois, get_work_metadata
 from paperank.open_citations import get_citing_dois
-from paperank.crossref import get_work_metadata, get_cited_dois
+
 
 class TestNetworkErrors(unittest.TestCase):
     @patch("paperank.open_citations._get_session")
@@ -27,7 +29,8 @@ class TestNetworkErrors(unittest.TestCase):
         mock_meta.return_value = {"message": {"reference": [{}, {"DOI": "10.1000/xyz"}]}}
         res = get_cited_dois("10.1234/ghi")
         self.assertEqual(res["article_doi"], "10.1234/ghi")
-        self.assertEqual(res["cited_dois"], ["10.1000/xyz"]) 
+        self.assertEqual(res["cited_dois"], ["10.1000/xyz"])
+
 
 if __name__ == "__main__":
     unittest.main()

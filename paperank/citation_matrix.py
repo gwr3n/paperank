@@ -1,18 +1,20 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+
 import numpy as np
 import scipy.sparse as sp
-from typing import List, Dict, Tuple, Callable, Any, Optional, Union, Literal
 
 from .crossref import get_cited_dois
-from .open_citations import get_citing_dois
 from .doi_utils import normalize_doi
+from .open_citations import get_citing_dois
 from .types import ProgressType
 
-from functools import lru_cache
-from concurrent.futures import ThreadPoolExecutor, as_completed
 try:
     from tqdm import tqdm  # optional
 except Exception:
     tqdm = None
+
 
 @lru_cache(maxsize=200_000)
 def _cached_cited(doi: str) -> Tuple[str, ...]:
@@ -31,6 +33,7 @@ def _cached_cited(doi: str) -> Tuple[str, ...]:
     except Exception:
         return tuple()
 
+
 @lru_cache(maxsize=200_000)
 def _cached_citing(doi: str) -> Tuple[str, ...]:
     """
@@ -48,12 +51,13 @@ def _cached_citing(doi: str) -> Tuple[str, ...]:
     except Exception:
         return tuple()
 
+
 def build_citation_sparse_matrix(
     doi_list: List[str],
     include_citing: bool = False,
     max_workers: Optional[int] = None,
     use_cache: bool = True,
-    progress: ProgressType = False
+    progress: ProgressType = False,
 ) -> Tuple[sp.csr_matrix, Dict[str, int]]:
     """
     Build a sparse adjacency matrix representing the citation graph for a list of DOIs.
@@ -91,8 +95,12 @@ def build_citation_sparse_matrix(
     n = len(doi_list)
     doi_to_idx: Dict[str, int] = {doi: idx for idx, doi in enumerate(doi_list)}
     # Choose fetch functions (cached or direct)
-    fetch_cited: Callable[[str], Tuple[str, ...]] = _cached_cited if use_cache else (lambda d: tuple((get_cited_dois(d).get("cited_dois", []) or [])))
-    fetch_citing: Callable[[str], Tuple[str, ...]] = _cached_citing if use_cache else (lambda d: tuple((get_citing_dois(d).get("citing_dois", []) or [])))
+    fetch_cited: Callable[[str], Tuple[str, ...]] = (
+        _cached_cited if use_cache else (lambda d: tuple((get_cited_dois(d).get("cited_dois", []) or [])))
+    )
+    fetch_citing: Callable[[str], Tuple[str, ...]] = (
+        _cached_citing if use_cache else (lambda d: tuple((get_citing_dois(d).get("citing_dois", []) or [])))
+    )
 
     # Fetch all neighbor lists (serial or parallel)
     def _job(doi: str) -> Tuple[str, Tuple[str, ...], Tuple[str, ...]]:
@@ -107,7 +115,7 @@ def build_citation_sparse_matrix(
         try:
             with ThreadPoolExecutor(max_workers=workers) as ex:
                 futures = {ex.submit(_job, d): d for d in doi_list}
-                if (progress is True or progress == 'tqdm') and tqdm is not None:
+                if (progress is True or progress == "tqdm") and tqdm is not None:
                     pbar = tqdm(total=len(futures), desc="Fetching citations", unit="doi", leave=False)
                 for fut in as_completed(futures):
                     try:
@@ -123,7 +131,7 @@ def build_citation_sparse_matrix(
                 pbar.close()
     else:
         iterable = doi_list
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(doi_list, desc="Fetching citations", unit="doi", leave=False)
         for d in iterable:
             try:

@@ -1,7 +1,8 @@
 import re
 from urllib.parse import quote, unquote
 
-_DOI_PREFIX_RE = re.compile(r'^https?://(dx\.)?doi\.org/', re.IGNORECASE)
+_DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
+
 
 def normalize_doi(doi: str) -> str:
     """
@@ -24,8 +25,9 @@ def normalize_doi(doi: str) -> str:
     if not doi:
         return doi
     d: str = unquote(doi.strip())
-    d = _DOI_PREFIX_RE.sub('', d)
+    d = _DOI_PREFIX_RE.sub("", d)
     return d.lower()
+
 
 def doi_to_path_segment(doi: str) -> str:
     """
@@ -41,4 +43,4 @@ def doi_to_path_segment(doi: str) -> str:
         >>> doi_to_path_segment("10.1016/j.ejor.2016.12.001")
         '10.1016%2Fj.ejor.2016.12.001'
     """
-    return quote(normalize_doi(doi), safe='')
+    return quote(normalize_doi(doi), safe="")

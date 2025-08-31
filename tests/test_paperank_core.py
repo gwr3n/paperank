@@ -1,21 +1,15 @@
-import unittest
-import tempfile
 import os
+import tempfile
+import unittest
 from unittest.mock import patch
-from paperank.paperank_core import (
-    rank,
-    rank_and_save_publications_JSON,
-    rank_and_save_publications_CSV
-)
+
+from paperank.paperank_core import rank, rank_and_save_publications_CSV, rank_and_save_publications_JSON
+
 
 class TestPapeRankCore(unittest.TestCase):
     def setUp(self):
         # Use a small set of DOIs for testing
-        self.doi_list = [
-            "10.1016/j.ejor.2016.12.001",
-            "10.1080/1540496x.2019.1696189",
-            "10.1016/j.intfin.2017.09.008"
-        ]
+        self.doi_list = ["10.1016/j.ejor.2016.12.001", "10.1080/1540496x.2019.1696189", "10.1016/j.intfin.2017.09.008"]
         self.alpha = 0.85
 
     def test_rank_returns_sorted_list(self):
@@ -52,7 +46,7 @@ class TestPapeRankCore(unittest.TestCase):
         # Provide titles/authors with commas, quotes, and newlines
         mock_meta.return_value = {"message": {}}
         mock_extract.side_effect = [
-            (["Doe, John"], "A \"Complex\" Title, With Commas", 2020),
+            (["Doe, John"], 'A "Complex" Title, With Commas', 2020),
             (["Alice\nBob"], "Another title", None),
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -64,6 +58,7 @@ class TestPapeRankCore(unittest.TestCase):
             self.assertIn('"A ""Complex"" Title, With Commas"', text)
             self.assertIn('"Doe, John"', text)
             self.assertIn('"Alice\nBob"', text)
+
 
 if __name__ == "__main__":
     unittest.main()

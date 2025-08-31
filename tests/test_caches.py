@@ -1,6 +1,9 @@
 import unittest
-from paperank.citation_crawler import clear_caches as clear_crawler_caches, _cached_cited, _cached_citing
+
+from paperank.citation_crawler import _cached_cited, _cached_citing
+from paperank.citation_crawler import clear_caches as clear_crawler_caches
 from paperank.crossref import clear_caches as clear_crossref_caches
+
 
 class TestCaches(unittest.TestCase):
     def test_clear_crawler_caches(self):
@@ -15,6 +18,7 @@ class TestCaches(unittest.TestCase):
     def test_clear_crossref_cache(self):
         # Just ensure no error
         clear_crossref_caches()
+
 
 if __name__ == "__main__":
     unittest.main()

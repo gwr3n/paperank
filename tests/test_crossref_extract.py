@@ -1,5 +1,7 @@
 import unittest
+
 from paperank.crossref import extract_authors_title_year
+
 
 class TestCrossrefExtract(unittest.TestCase):
     def test_extract_authors_title_year_partial_envelope(self):
@@ -17,6 +19,7 @@ class TestCrossrefExtract(unittest.TestCase):
         self.assertEqual(authors, ["Ada Lovelace", "Alan Turing"])
         self.assertEqual(title, "An example")
         self.assertEqual(year, 2021)
+
 
 if __name__ == "__main__":
     unittest.main()

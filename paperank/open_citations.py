@@ -1,9 +1,12 @@
+from threading import local
+from typing import Any, Dict, List
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from .doi_utils import normalize_doi, doi_to_path_segment
-from typing import Dict, List, Any
-from threading import local
+
+from .doi_utils import doi_to_path_segment, normalize_doi
+
 
 def _session() -> requests.Session:
     """
@@ -25,20 +28,25 @@ def _session() -> requests.Session:
     # Optional: reuse Crossref mailto for consistent contact details
     try:
         import os
+
         email = os.environ.get("CROSSREF_MAILTO")
     except Exception:
         email = None
     ua = "paperank/0.1 (+https://github.com/gwr3n/paperank)"
     if email:
         ua = f"paperank/0.1 (mailto:{email}; +https://github.com/gwr3n/paperank)"
-    s.headers.update({
-        "User-Agent": ua,
-        "Accept": "application/json",
-    })
+    s.headers.update(
+        {
+            "User-Agent": ua,
+            "Accept": "application/json",
+        }
+    )
     return s
+
 
 # Thread-local session to safely reuse connections in concurrent calls
 _TLS = local()
+
 
 def _get_session() -> requests.Session:
     s = getattr(_TLS, "session", None)
@@ -46,6 +54,7 @@ def _get_session() -> requests.Session:
         s = _session()
         _TLS.session = s
     return s
+
 
 def get_citing_dois(doi: str, timeout: int = 20) -> Dict[str, Any]:
     """

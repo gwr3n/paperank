@@ -23,10 +23,10 @@ Submodules:
     - doi_utils
 """
 
+from .citation_crawler import crawl_citation_neighborhood
 from .paperank_core import (
     crawl_and_rank_frontier,
     rank,
-    rank_and_save_publications_JSON,
     rank_and_save_publications_CSV,
+    rank_and_save_publications_JSON,
 )
-from .citation_crawler import crawl_citation_neighborhood

@@ -1,10 +1,12 @@
 import unittest
+
 from paperank.citation_crawler import (
     collect_cited_recursive,
     collect_citing_recursive,
+    crawl_citation_neighborhood,
     get_citation_neighborhood,
-    crawl_citation_neighborhood
 )
+
 
 class TestCitationCrawler(unittest.TestCase):
     def setUp(self):
@@ -35,11 +37,12 @@ class TestCitationCrawler(unittest.TestCase):
         result = get_citation_neighborhood(self.test_doi, forward_steps=1, backward_steps=1, progress=False)
         self.assertIsInstance(result, list)
         self.assertIn(self.test_doi, result)
-    
+
     def test_crawl_citation_neighborhood(self):
         result = crawl_citation_neighborhood([self.test_doi], steps=1, progress=False)
         self.assertIsInstance(result, list)
         self.assertIn(self.test_doi, result)
+
 
 if __name__ == "__main__":
     unittest.main()

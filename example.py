@@ -23,6 +23,7 @@ the recommended crawl_and_rank_frontier-based workflow.
 
 from paperank.paperank_core import crawl_and_rank_frontier
 
+
 def main_crawl_and_rank_frontier():
     test_doi = "10.1016/j.ejor.2005.01.053"
     output_format = "json"  # Change to "csv" as needed
@@ -40,6 +41,7 @@ def main_crawl_and_rank_frontier():
         max_iter=20000,
         teleport=None,
     )
+
 
 if __name__ == "__main__":
     main_crawl_and_rank_frontier()

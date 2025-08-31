@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 
+
 class TestCrawlerFilters(unittest.TestCase):
     def test_crawl_filters_min_year(self):
         # Arrange: mock neighborhood expansion and Crossref metadata years
@@ -18,8 +19,10 @@ class TestCrawlerFilters(unittest.TestCase):
                 return {"message": {"issued": {"date-parts": [[2020]]}}}
             return {"message": {}}
 
-        with mock.patch.object(cc, "get_citation_neighborhood", side_effect=mock_get_citation_neighborhood), \
-             mock.patch.object(cc, "get_work_metadata", side_effect=mock_get_work_metadata):
+        with (
+            mock.patch.object(cc, "get_citation_neighborhood", side_effect=mock_get_citation_neighborhood),
+            mock.patch.object(cc, "get_work_metadata", side_effect=mock_get_work_metadata),
+        ):
             # Act: require min_year=2015
             res = cc.crawl_citation_neighborhood(["root/0"], steps=1, min_year=2015, progress=False)
 
@@ -46,8 +49,10 @@ class TestCrawlerFilters(unittest.TestCase):
             # get_citing_dois returns a dict with list "citing_dois"
             return {"article_doi": doi, "citing_dois": [f"c/{i}" for i in range(c)]}
 
-        with mock.patch.object(cc, "get_citation_neighborhood", side_effect=mock_get_citation_neighborhood), \
-             mock.patch.object(cc, "get_citing_dois", side_effect=oc_response):
+        with (
+            mock.patch.object(cc, "get_citation_neighborhood", side_effect=mock_get_citation_neighborhood),
+            mock.patch.object(cc, "get_citing_dois", side_effect=oc_response),
+        ):
             # Act: require at least 3 citations
             res = cc.crawl_citation_neighborhood(["root/0"], steps=1, min_citations=3, progress=False)
 
@@ -55,6 +60,7 @@ class TestCrawlerFilters(unittest.TestCase):
         self.assertIn("z/3", res)
         self.assertNotIn("x/1", res)
         self.assertNotIn("y/2", res)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,14 +1,16 @@
-import numpy as np
-import json
 import csv
+import json
 import warnings
-from typing import List, Tuple, Dict, Any, Optional, Union, Literal
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from .citation_crawler import get_citation_neighborhood, crawl_citation_neighborhood
+import numpy as np
+
+from .citation_crawler import crawl_citation_neighborhood, get_citation_neighborhood
 from .citation_matrix import build_citation_sparse_matrix
+from .crossref import extract_authors_title_year, get_work_metadata
 from .paperank_matrix import adjacency_to_stochastic_matrix, compute_publication_rank_teleport
-from .crossref import get_work_metadata, extract_authors_title_year
 from .types import ProgressType
+
 
 def crawl_and_rank_bidirectional_neighborhood(
     doi: str,
@@ -85,6 +87,7 @@ def crawl_and_rank_bidirectional_neighborhood(
 
     return rank(doi_list, alpha=alpha, debug=debug, progress=progress, tol=tol, max_iter=max_iter, teleport=teleport)
 
+
 def crawl_and_rank_frontier(
     doi: Union[str, List[str]],
     steps: int = 1,
@@ -121,7 +124,9 @@ def crawl_and_rank_frontier(
     seeds: List[str] = [doi] if isinstance(doi, str) else list(dict.fromkeys(doi))
 
     # Crawl with iterative union neighborhoods
-    doi_list: List[str] = crawl_citation_neighborhood(seeds, steps=steps, min_year=min_year, min_citations=min_citations, progress=progress)
+    doi_list: List[str] = crawl_citation_neighborhood(
+        seeds, steps=steps, min_year=min_year, min_citations=min_citations, progress=progress
+    )
 
     # Choose output file base name
     if isinstance(doi, str):
@@ -131,15 +136,32 @@ def crawl_and_rank_frontier(
 
     # Save results
     if output_format == "json":
-        rank_and_save_publications_JSON(doi_list, out_path=base_name + ".json", alpha=alpha, tol=tol, max_iter=max_iter, teleport=teleport, progress=progress)
+        rank_and_save_publications_JSON(
+            doi_list,
+            out_path=base_name + ".json",
+            alpha=alpha,
+            tol=tol,
+            max_iter=max_iter,
+            teleport=teleport,
+            progress=progress,
+        )
     elif output_format == "csv":
-        rank_and_save_publications_CSV(doi_list, out_path=base_name + ".csv", alpha=alpha, tol=tol, max_iter=max_iter, teleport=teleport, progress=progress)
+        rank_and_save_publications_CSV(
+            doi_list,
+            out_path=base_name + ".csv",
+            alpha=alpha,
+            tol=tol,
+            max_iter=max_iter,
+            teleport=teleport,
+            progress=progress,
+        )
     else:
         print(f"Unknown output format: {output_format}")
 
     # Rank and return
-    progress_val = 'tqdm' if debug else progress
+    progress_val = "tqdm" if debug else progress
     return rank(doi_list, alpha=alpha, debug=debug, progress=progress_val, tol=tol, max_iter=max_iter, teleport=teleport)
+
 
 def rank(
     doi_list: List[str],
@@ -179,18 +201,17 @@ def rank(
 
     if debug:
         print("Computing PapeRank via sparse power-iteration with teleportation...")
-    progress_val = 'tqdm' if debug else progress
+    progress_val = "tqdm" if debug else progress
     r = compute_publication_rank_teleport(S, alpha=alpha, tol=tol, max_iter=max_iter, teleport=teleport, progress=progress_val)
     if debug:
         print("PapeRank computation completed.")
 
     idx_to_doi: Dict[int, str] = {idx: doi for doi, idx in doi_to_idx.items()}
     ranked: List[Tuple[str, float]] = sorted(
-        ((idx_to_doi[i], float(score)) for i, score in enumerate(r)),
-        key=lambda x: x[1],
-        reverse=True
+        ((idx_to_doi[i], float(score)) for i, score in enumerate(r)), key=lambda x: x[1], reverse=True
     )
     return ranked
+
 
 def rank_and_save_publications_JSON(
     doi_list: List[str],
@@ -222,7 +243,9 @@ def rank_and_save_publications_JSON(
     Side Effects:
         Writes a JSON file with ranked publication data.
     """
-    ranked: List[Tuple[str, float]] = rank(doi_list, alpha=alpha, progress=progress, tol=tol, max_iter=max_iter, teleport=teleport)
+    ranked: List[Tuple[str, float]] = rank(
+        doi_list, alpha=alpha, progress=progress, tol=tol, max_iter=max_iter, teleport=teleport
+    )
 
     results: List[Dict[str, Any]] = []
     for rank_idx, (doi, score) in enumerate(ranked[:max_results], start=1):
@@ -231,14 +254,16 @@ def rank_and_save_publications_JSON(
         except Exception:
             meta = {}
         authors, title, year = extract_authors_title_year(meta)
-        results.append({
-            "doi": doi,
-            "rank": rank_idx,
-            "score": score,
-            "authors": authors,
-            "title": title,
-            "year": year,
-        })
+        results.append(
+            {
+                "doi": doi,
+                "rank": rank_idx,
+                "score": score,
+                "authors": authors,
+                "title": title,
+                "year": year,
+            }
+        )
 
     payload: Dict[str, Any] = {
         "alpha": alpha,
@@ -249,6 +274,7 @@ def rank_and_save_publications_JSON(
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+
 
 def rank_and_save_publications_CSV(
     doi_list: List[str],
@@ -280,7 +306,9 @@ def rank_and_save_publications_CSV(
     Side Effects:
         Writes a CSV file with ranked publication data.
     """
-    ranked: List[Tuple[str, float]] = rank(doi_list, alpha=alpha, progress=progress, tol=tol, max_iter=max_iter, teleport=teleport)
+    ranked: List[Tuple[str, float]] = rank(
+        doi_list, alpha=alpha, progress=progress, tol=tol, max_iter=max_iter, teleport=teleport
+    )
 
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)

@@ -1,12 +1,16 @@
-from typing import Set, Dict, List, Any, Optional, Union, Literal
-from .crossref import get_cited_dois, get_work_metadata, extract_authors_title_year
+from typing import Any, Dict, List, Literal, Optional, Set, Union
+
+from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
+
 try:
     from tqdm import tqdm  # optional
 except Exception:
     tqdm = None
 from functools import lru_cache
+
 from .types import ProgressType
+
 
 @lru_cache(maxsize=200_000)
 def _cached_cited(doi: str) -> tuple:
@@ -16,6 +20,7 @@ def _cached_cited(doi: str) -> tuple:
     except Exception:
         return tuple()
 
+
 @lru_cache(maxsize=200_000)
 def _cached_citing(doi: str) -> tuple:
     try:
@@ -24,11 +29,14 @@ def _cached_citing(doi: str) -> tuple:
     except Exception:
         return tuple()
 
+
 def _get_cited_list(doi: str) -> List[str]:
     return list(_cached_cited(doi))
 
+
 def _get_citing_list(doi: str) -> List[str]:
     return list(_cached_citing(doi))
+
 
 def collect_cited_recursive(
     doi: str,
@@ -36,7 +44,7 @@ def collect_cited_recursive(
     visited: Optional[Set[str]] = None,
     flatten: bool = False,
     max_nodes: Optional[int] = None,
-    progress: ProgressType = False
+    progress: ProgressType = False,
 ) -> Union[Dict[str, List[str]], List[str]]:
     """
     Recursively collect all articles cited by the given DOI up to 'depth' levels.
@@ -87,7 +95,7 @@ def collect_cited_recursive(
                 dfs(x, remaining - 1)
 
         iterable = cited_dois
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(cited_dois, desc=f"Depth {depth} citations for {doi}", leave=False)
         for c in iterable:
             if max_nodes is not None and len(visited) >= max_nodes:
@@ -100,12 +108,13 @@ def collect_cited_recursive(
     else:
         result: Dict[str, List[str]] = {doi: cited_dois}
         iterable = cited_dois
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(cited_dois, desc=f"Depth {depth} citations for {doi}", leave=False)
         for c in iterable:
             subtree = collect_cited_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress)
             result.update(subtree)
         return result
+
 
 def collect_citing_recursive(
     doi: str,
@@ -113,7 +122,7 @@ def collect_citing_recursive(
     visited: Optional[Set[str]] = None,
     flatten: bool = False,
     max_nodes: Optional[int] = None,
-    progress: ProgressType = False
+    progress: ProgressType = False,
 ) -> Union[Dict[str, List[str]], List[str]]:
     """
     Recursively collect all articles citing the given DOI up to 'depth' levels.
@@ -164,7 +173,7 @@ def collect_citing_recursive(
                 dfs(x, remaining - 1)
 
         iterable = citing_dois
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(citing_dois, desc=f"Depth {depth} citing for {doi}", leave=False)
         for c in iterable:
             if max_nodes is not None and len(visited) >= max_nodes:
@@ -177,18 +186,16 @@ def collect_citing_recursive(
     else:
         result: Dict[str, List[str]] = {doi: citing_dois}
         iterable = citing_dois
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(citing_dois, desc=f"Depth {depth} citing for {doi}", leave=False)
         for c in iterable:
             subtree = collect_citing_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress)
             result.update(subtree)
         return result
 
+
 def get_citation_neighborhood(
-    doi: str,
-    forward_steps: int = 1,
-    backward_steps: int = 1,
-    progress: ProgressType = True
+    doi: str, forward_steps: int = 1, backward_steps: int = 1, progress: ProgressType = True
 ) -> List[str]:
     """
     Given a DOI, return a flat list containing:
@@ -212,12 +219,14 @@ def get_citation_neighborhood(
     result = list(dict.fromkeys(result))  # Deduplicate, preserve order
     return result
 
+
 def crawl_citation_neighborhood(
-        doi: List[str], 
-        steps: int = 1, 
-        min_year: Optional[int] = None,
-        min_citations: Optional[int] = None,
-        progress: ProgressType = True) -> List[str]:
+    doi: List[str],
+    steps: int = 1,
+    min_year: Optional[int] = None,
+    min_citations: Optional[int] = None,
+    progress: ProgressType = True,
+) -> List[str]:
     """
     Crawl citation neighborhoods iteratively.
 
@@ -231,12 +240,12 @@ def crawl_citation_neighborhood(
         ...
         S_{steps-1} similarly;
         Return the union (deduplicated) of S0..S_{steps-1}, preserving order.
-    
+
     Args:
         doi: List of starting DOIs.
         steps: Number of iterative crawling steps.
         progress: If True and tqdm is available, show progress bars during fetching.
-    
+
     Returns:
         List of unique DOIs in the crawled neighborhood.
 
@@ -250,7 +259,7 @@ def crawl_citation_neighborhood(
         out: List[str] = []
         seen: Set[str] = set()
         iterable = seeds
-        if (progress is True or progress == 'tqdm') and tqdm is not None:
+        if (progress is True or progress == "tqdm") and tqdm is not None:
             iterable = tqdm(seeds, desc="Crawling seeds", leave=False)
         for d in iterable:
             lst = get_citation_neighborhood(d, 1, 1, progress=False)
@@ -258,12 +267,12 @@ def crawl_citation_neighborhood(
                 if x not in seen:
                     seen.add(x)
                     out.append(x)
-        
+
         # Apply independent filters: min_year and min_citations
         if min_year is not None or min_citations is not None:
             filtered: List[str] = []
             iterable_filter = out
-            if (progress is True or progress == 'tqdm') and tqdm is not None:
+            if (progress is True or progress == "tqdm") and tqdm is not None:
                 iterable_filter = tqdm(out, desc="Filtering DOIs", leave=False)
             for doi_item in iterable_filter:
                 drop = False
@@ -314,6 +323,7 @@ def crawl_citation_neighborhood(
                 seen_total.add(x)
                 result.append(x)
     return result
+
 
 # New: cache management
 def clear_caches() -> None:

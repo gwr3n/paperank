@@ -1,13 +1,13 @@
+import warnings
+from typing import Any, Callable, Literal, Optional, Union
+
 import numpy as np
 import scipy.sparse
-import warnings
-from typing import Optional, Callable, Union, Any, Literal
 
 from .types import ProgressType
 
-def adjacency_to_stochastic_matrix(
-    adj_matrix: Union[np.ndarray, scipy.sparse.spmatrix]
-) -> scipy.sparse.csr_matrix:
+
+def adjacency_to_stochastic_matrix(adj_matrix: Union[np.ndarray, scipy.sparse.spmatrix]) -> scipy.sparse.csr_matrix:
     """
     Convert an adjacency matrix to a row-stochastic matrix (CSR format).
     Each row sums to 1. If a row is all zeros, it remains zeros.
@@ -44,10 +44,8 @@ def adjacency_to_stochastic_matrix(
     mat = mat.multiply(inv_row_sums[:, np.newaxis])
     return mat.tocsr()
 
-def apply_random_jump(
-    stochastic_matrix: scipy.sparse.spmatrix,
-    alpha: float = 0.85
-) -> scipy.sparse.csr_matrix:
+
+def apply_random_jump(stochastic_matrix: scipy.sparse.spmatrix, alpha: float = 0.85) -> scipy.sparse.csr_matrix:
     """
     DEPRECATED: Use compute_publication_rank_teleport(...) instead.
 
@@ -91,12 +89,13 @@ def apply_random_jump(
     S = stochastic_matrix.toarray()
 
     row_sums = S.sum(axis=1)
-    zero_rows = (row_sums == 0)
+    zero_rows = row_sums == 0
     if np.any(zero_rows):
         S[zero_rows, :] = 1.0 / N
 
     S = alpha * S + (1 - alpha) * (1.0 / N)
     return scipy.sparse.csr_matrix(S)
+
 
 def compute_publication_rank(
     stochastic_matrix: Union[np.ndarray, scipy.sparse.spmatrix],
@@ -104,7 +103,7 @@ def compute_publication_rank(
     max_iter: int = 1000,
     init: Optional[np.ndarray] = None,
     callback: Optional[Callable[[int, float, np.ndarray], Any]] = None,
-    progress: ProgressType = False
+    progress: ProgressType = False,
 ) -> np.ndarray:
     """
     Compute the stationary distribution (PapeRank) for a row-stochastic matrix S.
@@ -156,9 +155,10 @@ def compute_publication_rank(
     ST = S.transpose().tocsr()
 
     pbar = None
-    if progress == 'tqdm' or progress is True:
+    if progress == "tqdm" or progress is True:
         try:
             from tqdm import tqdm
+
             pbar = tqdm(total=max_iter, desc="PapeRank", unit="it", leave=False)
         except Exception:
             # fallback to printing every 10 if tqdm unavailable but True requested
@@ -192,8 +192,12 @@ def compute_publication_rank(
         if pbar:
             pbar.update(1)
             pbar.set_postfix_str(f"delta={delta:.3e}")
-        elif (isinstance(progress, int) and not isinstance(progress, bool) and progress > 0
-              and ((it + 1) % progress == 0 or delta < tol)):
+        elif (
+            isinstance(progress, int)
+            and not isinstance(progress, bool)
+            and progress > 0
+            and ((it + 1) % progress == 0 or delta < tol)
+        ):
             print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta:.3e}")
 
         if delta < tol:
@@ -210,6 +214,7 @@ def compute_publication_rank(
         stacklevel=2,
     )
     return r
+
 
 def compute_publication_rank_teleport(
     stochastic_matrix: Union[np.ndarray, scipy.sparse.spmatrix],
@@ -265,7 +270,9 @@ def compute_publication_rank_teleport(
     # Validate rows are either stochastic (~1) or dangling (~0)
     valid_rows = np.isclose(row_sums, 1.0, atol=1e-9) | np.isclose(row_sums, 0.0, atol=1e-12)
     if not np.all(valid_rows):
-        raise ValueError("Input must be row-stochastic; rows must sum to 1 or 0 (dangling). Consider adjacency_to_stochastic_matrix.")
+        raise ValueError(
+            "Input must be row-stochastic; rows must sum to 1 or 0 (dangling). Consider adjacency_to_stochastic_matrix."
+        )
     dangling = row_sums == 0.0
 
     if teleport is None:
@@ -295,9 +302,10 @@ def compute_publication_rank_teleport(
     ST = S.transpose().tocsr()
 
     pbar = None
-    if progress == 'tqdm' or progress is True:
+    if progress == "tqdm" or progress is True:
         try:
             from tqdm import tqdm
+
             pbar = tqdm(total=max_iter, desc="PapeRank", unit="it", leave=False)
         except Exception:
             if progress is True:
@@ -329,8 +337,12 @@ def compute_publication_rank_teleport(
         if pbar:
             pbar.update(1)
             pbar.set_postfix_str(f"delta={delta:.3e}")
-        elif (isinstance(progress, int) and not isinstance(progress, bool) and progress > 0
-              and ((it + 1) % progress == 0 or delta < tol)):
+        elif (
+            isinstance(progress, int)
+            and not isinstance(progress, bool)
+            and progress > 0
+            and ((it + 1) % progress == 0 or delta < tol)
+        ):
             print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta:.3e}")
 
         if delta < tol:
