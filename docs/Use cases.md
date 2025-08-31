@@ -29,7 +29,7 @@ What you do
 
 Minimal example (Python)
 ```python
-from paperank.paperank_core import crawl_and_rank_frontier
+from paperank import crawl_and_rank_frontier
 
 results = crawl_and_rank_frontier(
     doi="10.1016/j.ejor.2016.12.001",  # your cornerstone DOI
@@ -84,7 +84,7 @@ What you do
 
 Minimal example (Python)
 ```python
-from paperank.paperank_core import rank, rank_and_save_publications_CSV
+from paperank import rank, rank_and_save_publications_CSV
 
 doi_list = [
     "10.1016/j.ejor.2016.12.001",
@@ -129,14 +129,17 @@ What you do
 
 Minimal example (Python)
 ```python
-from paperank.citation_crawler import get_citation_neighborhood
-from paperank.paperank_core import rank
+from paperank import crawl_and_rank_frontier, rank
 
 seed_a = "10.1016/j.ejor.2016.12.001"  # subtopic A
 seed_b = "10.1080/1540496x.2019.1696189"  # subtopic B
 
-nh_a = set(get_citation_neighborhood(seed_a, forward_steps=1, backward_steps=1, progress=True))
-nh_b = set(get_citation_neighborhood(seed_b, forward_steps=1, backward_steps=1, progress=True))
+# Use crawl_and_rank_frontier to gather each 1-hop bidirectional frontier and return ranked results.
+# Convert to sets of DOIs for overlap/union analysis.
+ranked_a = crawl_and_rank_frontier(doi=seed_a, steps=1, alpha=0.85, debug=False, progress=True)
+ranked_b = crawl_and_rank_frontier(doi=seed_b, steps=1, alpha=0.85, debug=False, progress=True)
+nh_a = {d for d, _ in ranked_a}
+nh_b = {d for d, _ in ranked_b}
 
 overlap = sorted(nh_a & nh_b)          # candidate bridges (appear near both seeds)
 shortlist = sorted(nh_a | nh_b)        # union to rank more broadly
@@ -176,7 +179,7 @@ What you do
 
 Option A — From one cornerstone DOI (top 10 saved automatically)
 ```python
-from paperank.paperank_core import crawl_and_rank_frontier
+from paperank import crawl_and_rank_frontier
 
 # Writes a JSON file like 10_1016_j_ejor_2016_12_001.json with top results
 _ = crawl_and_rank_frontier(
@@ -193,7 +196,7 @@ _ = crawl_and_rank_frontier(
 
 Option B — From a shortlist you already have (choose how many to save)
 ```python
-from paperank.paperank_core import rank_and_save_publications_JSON
+from paperank import rank_and_save_publications_JSON
 
 doi_list = [
     "10.1016/j.ejor.2016.12.001",
@@ -245,8 +248,7 @@ What you do
 
 Minimal example (Python)
 ```python
-from paperank.citation_crawler import get_citation_neighborhood
-from paperank.paperank_core import rank
+from paperank import crawl_and_rank_frontier, rank
 
 # Your current bibliography (sample)
 my_bib = [
@@ -257,7 +259,8 @@ my_bib = [
 
 # Expand around a cornerstone (you can add a second seed and merge)
 seed = "10.1016/j.ejor.2016.12.001"
-nh = get_citation_neighborhood(seed, forward_steps=1, backward_steps=1, progress=True)
+ranked_nh = crawl_and_rank_frontier(doi=seed, steps=1, alpha=0.85, debug=False, progress=True)
+nh = [d for d, _ in ranked_nh]
 
 # Union of what you have and what’s nearby
 shortlist = list(dict.fromkeys(my_bib + nh))
