@@ -30,8 +30,8 @@ def main_crawl_and_rank_frontier():
     crawl_and_rank_frontier(
         doi=test_doi,
         steps=2,
-        # min_year=2000,
-        # min_citations=5,
+        min_year=2000,
+        min_citations=5,
         alpha=0.85,
         output_format=output_format,
         debug=False,

@@ -104,6 +104,8 @@ def crawl_and_rank_frontier(
     Args:
         doi: A single DOI (str) or a list of DOIs to use as seeds.
         steps: Number of iterative crawl steps (each step uses 1-hop neighborhoods).
+        min_year: Optional minimum publication year filter for crawled works.
+        min_citations: Optional minimum citation count filter for crawled works.
         alpha: PageRank damping factor.
         output_format: "json" or "csv".
         debug: If True, prints progress/debug information.
