@@ -59,16 +59,15 @@ Dependencies are managed via `pyproject.toml` and include:
 Here’s a minimal example to rank publications in a citation neighborhood:
 
 ```python
-from paperank.paperank_core import crawl_and_rank
+from paperank.paperank_core import crawl_and_rank_frontier
 
 # Set your target DOI
 doi = "10.1016/j.ejor.2005.01.053"
 
 # Run the analysis
-results = crawl_and_rank(
+results = crawl_and_rank_frontier(
     doi=doi,
-    forward_steps=2,
-    backward_steps=2,
+    steps=2,
     alpha=0.85,
     output_format="json",  # or "csv"
     debug=False,
@@ -85,19 +84,24 @@ This will:
 
 ## Advanced Parameters
 
-You can fine-tune the PageRank iteration from `rank` and `crawl_and_rank`:
+You can fine-tune the crawl and ranking via the following parameters:
 
-- `tol`: Convergence tolerance (default `1e-12`).
-- `max_iter`: Maximum number of iterations (default `10000`).
-- `teleport`: Optional teleportation distribution (numpy array of size N), non-negative and summing to 1. If `None`, a uniform distribution is used.
+- `min_year`: Optional minimum publication year to include during crawling (filters older works).
+- `min_citations`: Optional minimum total citation count to include during crawling (filters low-signal works).
+- `tol`: Convergence tolerance for the power iteration (default `1e-12`).
+- `max_iter`: Maximum number of power-iteration steps (default `10000`).
+- `teleport`: Optional teleportation distribution (NumPy array of size N), non-negative and summing to 1. If `None`, a uniform distribution is used.
 
 Example:
 
 ```python
-results = crawl_and_rank(
-    doi=doi,
-    forward_steps=1,
-    backward_steps=1,
+from paperank.paperank_core import crawl_and_rank_frontier
+
+results = crawl_and_rank_frontier(
+    doi="10.1016/j.ejor.2005.01.053",
+    steps=1,
+    min_year=2000,       
+    min_citations=5,     
     alpha=0.85,
     tol=1e-12,
     max_iter=20000,
@@ -107,17 +111,9 @@ results = crawl_and_rank(
 
 ---
 
-## Deprecated Function
-
-- `apply_random_jump` is deprecated. It materializes a dense Google matrix and is intended only for very small graphs.  
-  Prefer `compute_publication_rank_teleport`, which applies teleportation during iteration without building a dense matrix.  
-  If you already used `apply_random_jump`, pass the result to `compute_publication_rank` (not the teleport variant).
-
----
-
 ## Main API
 
-- `crawl_and_rank`:  
+- `crawl_and_rank_frontier`:  
   End-to-end workflow for crawling a citation network and ranking publications.
 
 - `rank`:  
