@@ -1,5 +1,4 @@
 import io
-import sys
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
 import warnings
@@ -607,6 +606,49 @@ class TestPapeRankMatrix(unittest.TestCase):
         # Depending on environment (tqdm installed or not), output may be empty or not.
         _ = f_out.getvalue()
         _ = f_err.getvalue()
+
+    def test_callback_invoked_and_early_stop(self):
+        # 3-node graph with one dangling node (row 3)
+        S = np.array(
+            [
+                [0.0, 1.0, 0.0],  # node 0 -> node 1
+                [0.0, 0.0, 1.0],  # node 1 -> node 2
+                [0.0, 0.0, 0.0],  # node 2 dangling
+            ],
+            dtype=float,
+        )
+
+        calls = []
+        stop_at_iter = 3
+
+        def cb(it, delta, r):
+            # record and validate callback payload
+            calls.append((it, float(delta), r.copy()))
+            self.assertIsInstance(it, int)
+            self.assertGreaterEqual(it, 1)
+            self.assertEqual(r.shape, (3,))
+            self.assertTrue(np.all(np.isfinite(r)))
+            self.assertGreaterEqual(float(delta), 0.0)
+            # request early stop at stop_at_iter
+            return it >= stop_at_iter
+
+        r = compute_publication_rank_teleport(
+            S,
+            alpha=0.85,
+            tol=0.0,  # ensure we don't stop due to tolerance
+            max_iter=100,
+            callback=cb,
+            progress=False,
+        )
+
+        # Callback is invoked twice per iteration in the current implementation
+        self.assertEqual(len(calls), stop_at_iter * 2)
+        self.assertEqual(calls[-1][0], stop_at_iter)
+
+        # Returned rank is a valid probability distribution
+        self.assertEqual(r.shape, (3,))
+        self.assertAlmostEqual(float(r.sum()), 1.0, places=12)
+        self.assertTrue(np.all(r >= 0.0))
 
 if __name__ == "__main__":
     unittest.main()
