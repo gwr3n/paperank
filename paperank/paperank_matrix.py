@@ -30,7 +30,7 @@ def adjacency_to_stochastic_matrix(adj_matrix: Union[np.ndarray, scipy.sparse.sp
     else:
         spm = cast(scipy.sparse.spmatrix, adj_matrix)
         # mypy-safe: first make CSR, then convert dtype
-        mat = spm.tocsr().astype(np.float64, copy=True)
+        mat = spm.tocsr().astype(np.float64, copy=True) # type: ignore[attr-defined]
 
     # Validate values: finite and non-negative
     data = mat.data
@@ -93,7 +93,7 @@ def apply_random_jump(stochastic_matrix: scipy.sparse.spmatrix, alpha: float = 0
         return scipy.sparse.csr_matrix((0, 0))
 
     # mypy-safe: CSR first, then dtype conversion, then dense
-    S = cast(scipy.sparse.spmatrix, stochastic_matrix).tocsr().astype(np.float64, copy=False).toarray()
+    S = cast(scipy.sparse.spmatrix, stochastic_matrix).tocsr().astype(np.float64, copy=False).toarray() # type: ignore[attr-defined]
 
     row_sums = S.sum(axis=1)
     zero_rows = row_sums == 0
@@ -138,7 +138,7 @@ def compute_publication_rank(
     else:
         spm = cast(scipy.sparse.spmatrix, stochastic_matrix)
         # mypy-safe: CSR first, then dtype conversion
-        S = spm.tocsr().astype(np.float64, copy=False)
+        S = spm.tocsr().astype(np.float64, copy=False) # type: ignore[attr-defined]
 
     n = S.shape[0]
     if S.shape[0] != S.shape[1]:
@@ -280,7 +280,7 @@ def compute_publication_rank_teleport(
     else:
         spm = cast(scipy.sparse.spmatrix, stochastic_matrix)
         # mypy-safe: CSR first, then dtype conversion
-        S = spm.tocsr().astype(np.float64, copy=False)
+        S = spm.tocsr().astype(np.float64, copy=False) # type: ignore[attr-defined]
 
     # Validate values: finite and non-negative
     if S.data.size:
