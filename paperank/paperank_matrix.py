@@ -117,8 +117,8 @@ def compute_publication_rank(
         init: Optional initial probability vector (np.ndarray, shape (N,)), defaults to uniform.
         callback: Optional callable(iteration, delta, r) -> bool|None.
             If it returns True, iteration stops early.
-        progress: None for no output; int N to print every N iterations;
-            or 'tqdm' to show a progress bar (requires tqdm).
+        progress: False for no output; int N to print every N iterations;
+             or 'tqdm' to show a progress bar (requires tqdm).
 
     Returns:
         np.ndarray: Rank vector r of shape (N,), non-negative and sums to 1.
@@ -204,6 +204,11 @@ def compute_publication_rank(
 
     if pbar:
         pbar.close()
+    warnings.warn(
+        f"PapeRank did not converge within max_iter={max_iter} (last delta={delta:.3e}). Returning last iterate.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
     return r
 
 def compute_publication_rank_teleport(
@@ -234,7 +239,7 @@ def compute_publication_rank_teleport(
         init: Optional initial distribution (size N). Will be normalized.
         teleport: Optional teleportation distribution v (size N), non-negative and sums to 1. Defaults to uniform.
         callback: Optional callable(iteration, delta, r)->bool to stop early when returns True.
-        progress: None for no output; integer N to print every N iterations; or 'tqdm' to show a progress bar.
+        progress: False for no output; integer N to print every N iterations; or 'tqdm' to show a progress bar.
 
     Returns:
         Stationary distribution r (size N) summing to 1.
@@ -243,6 +248,13 @@ def compute_publication_rank_teleport(
         raise ValueError("alpha must be in [0, 1]")
 
     S = scipy.sparse.csr_matrix(stochastic_matrix, dtype=np.float64)
+    # Validate values: finite and non-negative
+    if S.data.size:
+        if not np.all(np.isfinite(S.data)):
+            raise ValueError("stochastic_matrix contains non-finite values (NaN/Inf).")
+        if np.any(S.data < 0):
+            raise ValueError("stochastic_matrix must be non-negative.")
+
     n = S.shape[0]
     if S.shape[0] != S.shape[1]:
         raise ValueError("stochastic_matrix must be square")
@@ -329,4 +341,9 @@ def compute_publication_rank_teleport(
 
     if pbar:
         pbar.close()
+    warnings.warn(
+        f"PapeRank (teleport) did not converge within max_iter={max_iter} (last delta={delta:.3e}). Returning last iterate.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
     return r

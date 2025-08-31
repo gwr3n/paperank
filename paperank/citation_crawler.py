@@ -1,5 +1,5 @@
 from typing import Set, Dict, List, Any, Optional, Union, Literal
-from .crossref import get_cited_dois, get_work_metadata
+from .crossref import get_cited_dois, get_work_metadata, extract_authors_title_year
 from .open_citations import get_citing_dois
 try:
     from tqdm import tqdm  # optional
@@ -261,25 +261,6 @@ def crawl_citation_neighborhood(
         
         # Apply independent filters: min_year and min_citations
         if min_year is not None or min_citations is not None:
-            def _extract_year(meta: Dict[str, Any]) -> Optional[int]:
-                # Prefer 'issued', then 'published-print', 'published-online', 'published'
-                def _first_year(key: str) -> Optional[int]:
-                    v = meta.get(key)
-                    if isinstance(v, dict):
-                        dp = v.get("date-parts")
-                        if isinstance(dp, list) and dp and isinstance(dp[0], list) and dp[0]:
-                            try:
-                                return int(dp[0][0])
-                            except Exception:
-                                return None
-                    return None
-                return (
-                    _first_year("issued")
-                    or _first_year("published-print")
-                    or _first_year("published-online")
-                    or _first_year("published")
-                )
-
             filtered: List[str] = []
             iterable_filter = out
             if (progress is True or progress == 'tqdm') and tqdm is not None:
@@ -293,7 +274,8 @@ def crawl_citation_neighborhood(
                         meta = get_work_metadata(doi_item) or {}
                     except Exception:
                         meta = {}
-                    year_val: Optional[int] = _extract_year(meta)
+                    # Reuse shared extractor which accepts envelope or message
+                    _, _, year_val = extract_authors_title_year(meta)
                     if year_val is not None and year_val < min_year:
                         drop = True
 

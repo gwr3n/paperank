@@ -30,4 +30,4 @@ from .paperank_core import (
     rank_and_save_publications_JSON,
     rank_and_save_publications_CSV,
 )
-from .citation_crawler import get_citation_neighborhood
+from .citation_crawler import crawl_citation_neighborhood

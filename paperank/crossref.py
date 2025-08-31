@@ -19,12 +19,17 @@ def _session() -> requests.Session:
         total=5,
         backoff_factor=0.5,
         status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["GET"],
+        allowed_methods=frozenset(["GET"]),
+        respect_retry_after_header=True,
         raise_on_status=False,
     )
     s.mount("https://", HTTPAdapter(max_retries=retries))
+    email = os.environ.get("CROSSREF_MAILTO")
+    ua = f"paperank/0.1 (+https://github.com/gwr3n/paperank)"
+    if email:
+        ua = f"paperank/0.1 (mailto:{email}; +https://github.com/gwr3n/paperank)"
     s.headers.update({
-        "User-Agent": f"paperank/0.1 (+https://github.com/gwr3n/paperank)",
+        "User-Agent": ua,
         "Accept": "application/json",
     })
     return s
