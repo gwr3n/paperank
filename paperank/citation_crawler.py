@@ -326,7 +326,6 @@ def crawl_citation_neighborhood(
                 result.append(x)
     return result
 
-
 # New: cache management
 def clear_caches() -> None:
     """Clear LRU caches used by citation crawler helpers."""
