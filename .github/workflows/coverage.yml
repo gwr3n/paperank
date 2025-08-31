@@ -28,13 +28,10 @@ jobs:
         run: |
           python -m coverage run --source=paperank -m unittest discover -v -s tests -p 'test_*.py'
           python -m coverage xml
-      - name: Upload to Codecov
+      - name: Upload to Codecov (OIDC)
         uses: codecov/codecov-action@v4
         with:
+          use_oidc: true
           files: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
-        # If you install the Codecov GitHub App, no token is needed.
-        # Otherwise, add:
-        # env:
-        #   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
