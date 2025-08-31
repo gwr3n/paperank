@@ -1,7 +1,5 @@
-from typing import Dict, List, Optional, Set, Union, Any, Callable, Iterable
-
-from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
-from .open_citations import get_citing_dois
+from functools import lru_cache
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
 try:
     from tqdm import tqdm as _tqdm  # optional
@@ -10,8 +8,8 @@ except Exception:
 # A safely-typed tqdm alias: Optional callable (guarded before use)
 tqdm: Optional[Callable[..., Iterable[Any]]] = _tqdm
 
-from functools import lru_cache
-
+from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
+from .open_citations import get_citing_dois
 from .types import ProgressType
 
 
