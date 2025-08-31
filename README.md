@@ -77,7 +77,7 @@ Dependencies are managed via `pyproject.toml` and include:
 Here’s a minimal example to rank publications in a citation neighborhood:
 
 ```python
-from paperank.paperank_core import crawl_and_rank_frontier
+from paperank import crawl_and_rank_frontier
 
 # Set your target DOI
 doi = "10.1016/j.ejor.2005.01.053"
@@ -113,7 +113,7 @@ You can fine-tune the crawl and ranking via the following parameters:
 Example:
 
 ```python
-from paperank.paperank_core import crawl_and_rank_frontier
+from paperank import crawl_and_rank_frontier
 
 results = crawl_and_rank_frontier(
     doi="10.1016/j.ejor.2005.01.053",
