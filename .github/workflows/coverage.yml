@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   checks: write
+  id-token: write
 concurrency:
   group: coverage-${{ github.ref }}
   cancel-in-progress: true
