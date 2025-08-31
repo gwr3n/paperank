@@ -5,7 +5,15 @@ PapeRank helps you quickly find and prioritize the most relevant papers to read 
 Notes
 - Works with a local “neighborhood” around your starting papers (not the entire literature).
 - Uses public data sources (Crossref and OpenCitations); some references may be missing DOIs.
-- Exports ranked results with authors, title, year to JSON or CSV.
+- Exports ranked results with authors, title, year to JSON/CSV.
+- Exports default to the top 10 items; override with max_results in rank_and_save_publications_JSON/CSV.
+- For steps>1, crawling expands via iterative 1‑hop unions with deduplication across steps (each DOI is visited at most once).
+
+Prerequisites
+- Optional: install tqdm to see progress bars (pip install tqdm). Set progress='tqdm' or True.
+- Recommended: set an email for polite Crossref usage:
+  - macOS/Linux terminal: export CROSSREF_MAILTO="you@example.com"
+- Networked functions use caching internally; results still depend on API availability.
 
 ---
 
@@ -21,21 +29,35 @@ What you do
 
 Minimal example (Python)
 ```python
-from paperank.paperank_core import crawl_and_rank
+from paperank.paperank_core import crawl_and_rank_frontier
 
-results = crawl_and_rank(
+results = crawl_and_rank_frontier(
     doi="10.1016/j.ejor.2016.12.001",  # your cornerstone DOI
-    forward_steps=1,                   # who cites it (1 hop)
-    backward_steps=1,                  # who it cites (1 hop)
+    steps=1,                           # 1-hop bidirectional frontier (cited + citing)
     alpha=0.85,                        # sensible default
     output_format="csv",               # also supports "json"
-    debug=False
+    debug=False,
+    progress=True
 )
 
 # results is a list of (doi, score), highest first
 for doi, score in results[:10]:
     print(f"{score:.5f}  {doi}")
 # A CSV file like 10_1016_j_ejor_2016_12_001.csv is saved with authors, title, year.
+```
+Notes
+- steps=1 collects both cited and citing 1-hop neighbors around each seed (bidirectional frontier).
+- For steps>1, the crawl performs iterative 1‑hop unions with deduplication across steps (frontier-style; nodes are not revisited).
+- Multiple seeds are supported by passing a list to `doi`, e.g., `doi=["doiA", "doiB"]` (output file base name becomes `crawl_{num_seeds}_seeds`).
+- You can filter during crawling with `min_year` and `min_citations`:
+```python
+results = crawl_and_rank_frontier(
+    doi="10.1016/j.ejor.2016.12.001",
+    steps=1,
+    min_year=2000,
+    min_citations=5,
+    progress=True
+)
 ```
 
 How this helps your survey
@@ -45,7 +67,7 @@ How this helps your survey
 
 Interpretation tips
 - Central ≠ most cited globally. It means “well-connected within this focused topic.”
-- If results look too narrow, increase steps (e.g., forward_steps=2). If too broad, reduce steps.
+- If results look too narrow, increase steps (e.g., steps=2). If too broad, reduce steps.
 - Keep a short note of parameters (steps, α) and the date to make your selection reproducible.
 
 ---
@@ -154,17 +176,19 @@ What you do
 
 Option A — From one cornerstone DOI (top 10 saved automatically)
 ```python
-from paperank.paperank_core import crawl_and_rank
+from paperank.paperank_core import crawl_and_rank_frontier
 
 # Writes a JSON file like 10_1016_j_ejor_2016_12_001.json with top results
-_ = crawl_and_rank(
+_ = crawl_and_rank_frontier(
     doi="10.1016/j.ejor.2016.12.001",
-    forward_steps=1,
-    backward_steps=1,
+    steps=1,            # 1-hop bidirectional frontier
     alpha=0.85,
     output_format="json",
-    debug=False
+    debug=False,
+    progress=True
 )
+# Tip: You can also pass multiple seeds:
+# _ = crawl_and_rank_frontier(doi=["doiA", "doiB"], steps=1, ...)
 ```
 
 Option B — From a shortlist you already have (choose how many to save)
