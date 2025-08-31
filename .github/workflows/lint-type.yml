@@ -30,3 +30,23 @@ jobs:
         run: flake8 . --count --max-line-length=127 --statistics
       - name: mypy
         run: mypy paperank
+
+[tool.black]
+line-length = 127
+target-version = ["py39", "py310", "py311"]
+exclude = """
+/(
+  \.git
+| \.venv
+| build
+| dist
+)/
+"""
+
+[tool.isort]
+profile = "black"
+line_length = 127
+
+[tool.flake8]
+max-line-length = 127
+extend-ignore = ["E203", "W503"]  # compatible with Black
