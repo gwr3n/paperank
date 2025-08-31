@@ -649,6 +649,96 @@ class TestPapeRankMatrix(unittest.TestCase):
         self.assertAlmostEqual(float(r.sum()), 1.0, places=12)
         self.assertTrue(np.all(r >= 0.0))
 
+    # ===== Additional tests for compute_publication_rank (non-teleport variant) =====
 
+    def test_compute_publication_rank_non_square_raises(self):
+        # Non-square matrix should raise "must be square"
+        S = np.ones((2, 3), dtype=float)
+        S = S / S.sum(axis=1, keepdims=True)  # make rows sum to 1 just to isolate the shape error
+        with self.assertRaisesRegex(ValueError, r"must be square"):
+            compute_publication_rank(S)
+
+    def test_compute_publication_rank_row_not_stochastic_raises(self):
+        # Row sums not close to 1 should raise
+        S = np.array(
+            [
+                [0.2, 0.2],  # sums to 0.4 (invalid)
+                [0.3, 0.7],  # sums to 1.0
+            ],
+            dtype=float,
+        )
+        with self.assertRaisesRegex(ValueError, r"row-stochastic"):
+            compute_publication_rank(S)
+
+    def test_compute_publication_rank_with_dangling_row_raises(self):
+        # Dangling row (sum=0) should raise and suggest using teleport variant
+        S = np.array(
+            [
+                [0.0, 1.0],
+                [0.0, 0.0],  # dangling row
+            ],
+            dtype=float,
+        )
+        with self.assertRaisesRegex(ValueError, r"row-stochastic"):
+            compute_publication_rank(S)
+
+    def test_compute_publication_rank_init_size_error(self):
+        # init wrong size raises
+        S = scipy.sparse.identity(3, dtype=float, format="csr")
+        init = np.array([1.0, 0.0], dtype=float)
+        with self.assertRaisesRegex(ValueError, r"init has incompatible size"):
+            compute_publication_rank(S, init=init)
+
+    def test_compute_publication_rank_init_negative_error(self):
+        # init with negative entries raises
+        S = scipy.sparse.identity(3, dtype=float, format="csr")
+        init = np.array([-1.0, 2.0, 0.0], dtype=float)
+        with self.assertRaisesRegex(ValueError, r"init must be non-negative"):
+            compute_publication_rank(S, init=init)
+
+    def test_compute_publication_rank_init_sum_nonpositive_error(self):
+        # init that sums to non-positive raises
+        S = scipy.sparse.identity(3, dtype=float, format="csr")
+        init = np.array([0.0, 0.0, 0.0], dtype=float)
+        with self.assertRaisesRegex(ValueError, r"init must sum to a positive value"):
+            compute_publication_rank(S, init=init)
+
+    def test_compute_publication_rank_negative_probability_iteration_raises(self):
+        # Construct a row-stochastic matrix with a negative entry that forces a negative component in r_next
+        # Row sums are exactly 1, but S[0,0] is negative.
+        S = np.array(
+            [
+                [-0.2, 1.2],  # sums to 1.0
+                [0.0, 1.0],   # sums to 1.0
+            ],
+            dtype=float,
+        )
+        # Expect error about negative probability during iteration
+        with self.assertRaisesRegex(ValueError, r"negative probability"):
+            compute_publication_rank(S, tol=1e-12, max_iter=100)
+
+    def test_compute_publication_rank_nonconvergence_warns_and_returns_last_iterate(self):
+        adjacency_matrix, _ = self.get_sample_adjacency_matrix()
+        S = adjacency_to_stochastic_matrix(adjacency_matrix)
+        G = apply_random_jump(S, alpha=0.85)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            # Very small tol and 1 iteration to ensure non-convergence path
+            r = compute_publication_rank(G, tol=1e-300, max_iter=1)
+
+        # Should emit a RuntimeWarning about not converging
+        msgs = [str(wi.message) for wi in w]
+        cats = [wi.category for wi in w]
+        self.assertTrue(
+            any(issubclass(c, RuntimeWarning) and "did not converge" in m for c, m in zip(cats, msgs)),
+            "Expected RuntimeWarning about non-convergence",
+        )
+
+        # Returned last iterate should still be a valid probability vector
+        self.assertEqual(r.shape, (G.shape[0],))
+        self.assertTrue(np.all(r >= -1e-15))
+        self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+        
 if __name__ == "__main__":
     unittest.main()
