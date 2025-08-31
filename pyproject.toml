@@ -29,3 +29,23 @@ exclude = ["tests", "tests.*"]
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 127
+target-version = ["py39", "py310", "py311"]
+exclude = '''
+/(
+  \.git
+| \.venv
+| build
+| dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 127
+
+[tool.flake8]
+max-line-length = 127
+extend-ignore = ["E203", "W503"]
