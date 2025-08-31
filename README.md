@@ -86,15 +86,12 @@ doi = "10.1016/j.ejor.2005.01.053"
 results = crawl_and_rank_frontier(
     doi=doi,
     steps=2,
-    alpha=0.85,
-    output_format="json",  # or "csv"
-    debug=False,
-    progress=True
+    output_format="json"  # or "csv"
 )
 ```
 
 This will:
-- Collect the citation neighborhood around the DOI
+- Collect the citation neighborhood around the DOI with 2 iterative crawl steps (each step uses 1-hop neighborhoods)
 - Compute PapeRank scores
 - Save results to a file (`<DOI>.json` or `<DOI>.csv`)
 
@@ -106,6 +103,7 @@ You can fine-tune the crawl and ranking via the following parameters:
 
 - `min_year`: Optional minimum publication year to include during crawling (filters older works).
 - `min_citations`: Optional minimum total citation count to include during crawling (filters low-signal works).
+- `alpha`: PageRank damping factor (default `0.85`).
 - `tol`: Convergence tolerance for the power iteration (default `1e-12`).
 - `max_iter`: Maximum number of power-iteration steps (default `10000`).
 - `teleport`: Optional teleportation distribution (NumPy array of size N), non-negative and summing to 1. If `None`, a uniform distribution is used.
@@ -123,7 +121,7 @@ results = crawl_and_rank_frontier(
     alpha=0.85,
     tol=1e-12,
     max_iter=20000,
-    teleport=None,
+    teleport=None
 )
 ```
 
