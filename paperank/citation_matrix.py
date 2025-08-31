@@ -12,6 +12,7 @@ from .types import ProgressType
 
 T = TypeVar("T")
 
+
 def _with_progress(
     iterable: Iterable[T],
     enabled: ProgressType,
@@ -25,6 +26,7 @@ def _with_progress(
     if enabled is True or enabled == "tqdm":
         try:
             from tqdm import tqdm as _tqdm
+
             kwargs: Dict[str, Any] = {"desc": desc, "leave": False}
             if total is not None:
                 kwargs["total"] = total
@@ -138,6 +140,7 @@ def build_citation_sparse_matrix(
                 if progress is True or progress == "tqdm":
                     try:
                         from tqdm import tqdm as _tqdm
+
                         pbar = _tqdm(total=len(futures), desc="Fetching citations", unit="doi", leave=False)
                     except Exception:
                         pbar = None

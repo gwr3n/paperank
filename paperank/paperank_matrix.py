@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, cast
 
 import numpy as np
 import scipy.sparse
@@ -24,8 +24,13 @@ def adjacency_to_stochastic_matrix(adj_matrix: Union[np.ndarray, scipy.sparse.sp
     if adj_matrix.shape[0] != adj_matrix.shape[1]:
         raise ValueError("Adjacency matrix must be square.")
 
-    # Ensure CSR float64 and DO NOT mutate caller: force copy
-    mat = scipy.sparse.csr_matrix(adj_matrix, dtype=np.float64, copy=True)
+    # Ensure CSR float64 and DO NOT mutate caller: force copy (narrow Union for mypy)
+    if isinstance(adj_matrix, np.ndarray):
+        mat = scipy.sparse.csr_matrix(adj_matrix, dtype=np.float64, copy=True)
+    else:
+        spm = cast(scipy.sparse.spmatrix, adj_matrix)
+        # mypy-safe: first make CSR, then convert dtype
+        mat = spm.tocsr().astype(np.float64, copy=True)
 
     # Validate values: finite and non-negative
     data = mat.data
@@ -40,9 +45,10 @@ def adjacency_to_stochastic_matrix(adj_matrix: Union[np.ndarray, scipy.sparse.sp
     inv_row_sums = np.zeros_like(row_sums, dtype=np.float64)
     nz = row_sums > 0
     inv_row_sums[nz] = 1.0 / row_sums[nz]
-    # Broadcasting across columns
-    mat = mat.multiply(inv_row_sums[:, np.newaxis])
-    return mat.tocsr()
+
+    D = scipy.sparse.diags(inv_row_sums, format="csr")
+    mat = (D @ mat).tocsr()
+    return mat
 
 
 def apply_random_jump(stochastic_matrix: scipy.sparse.spmatrix, alpha: float = 0.85) -> scipy.sparse.csr_matrix:
@@ -86,7 +92,8 @@ def apply_random_jump(stochastic_matrix: scipy.sparse.spmatrix, alpha: float = 0
     if N == 0:
         return scipy.sparse.csr_matrix((0, 0))
 
-    S = stochastic_matrix.toarray()
+    # mypy-safe: CSR first, then dtype conversion, then dense
+    S = cast(scipy.sparse.spmatrix, stochastic_matrix).tocsr().astype(np.float64, copy=False).toarray()
 
     row_sums = S.sum(axis=1)
     zero_rows = row_sums == 0
@@ -125,7 +132,14 @@ def compute_publication_rank(
     Raises:
         ValueError: If input matrix is not square, not row-stochastic, or init is invalid.
     """
-    S = scipy.sparse.csr_matrix(stochastic_matrix, dtype=np.float64)
+    # Narrow Union for scipy.sparse.csr_matrix
+    if isinstance(stochastic_matrix, np.ndarray):
+        S = scipy.sparse.csr_matrix(stochastic_matrix, dtype=np.float64)
+    else:
+        spm = cast(scipy.sparse.spmatrix, stochastic_matrix)
+        # mypy-safe: CSR first, then dtype conversion
+        S = spm.tocsr().astype(np.float64, copy=False)
+
     n = S.shape[0]
     if S.shape[0] != S.shape[1]:
         raise ValueError("stochastic_matrix must be square")
@@ -166,7 +180,7 @@ def compute_publication_rank(
                 progress = 10
 
     for it in range(max_iter):
-        r_next = ST @ r
+        r_next = np.asarray(ST @ r, dtype=np.float64).ravel()
         s = r_next.sum()
         if s <= 0:
             if pbar:
@@ -178,10 +192,8 @@ def compute_publication_rank(
                 pbar.close()
             raise ValueError("Encountered negative probability during iteration; ensure S is non-negative row-stochastic.")
 
-        delta = np.linalg.norm(r_next - r, 1)
-
-        err = np.linalg.norm(r_next - r, 1)
-        err_f: float = float(err)
+        delta_f: float = float(np.linalg.norm(r_next - r, 1))
+        err_f: float = delta_f
 
         if callback is not None:
             callback(it + 1, err_f, r_next)
@@ -191,26 +203,26 @@ def compute_publication_rank(
                 pbar.close()
             return r_next
         if callback is not None:
-            should_stop = bool(callback(it + 1, delta, r_next))
+            should_stop = bool(callback(it + 1, delta_f, r_next))
             if should_stop:
                 if pbar:
                     pbar.update(1)
-                    pbar.set_postfix_str(f"delta={delta:.3e} (stopped)")
+                    pbar.set_postfix_str(f"delta={delta_f:.3e} (stopped)")
                     pbar.close()
                 return r_next
 
         if pbar:
             pbar.update(1)
-            pbar.set_postfix_str(f"delta={delta:.3e}")
+            pbar.set_postfix_str(f"delta={delta_f:.3e}")
         elif (
             isinstance(progress, int)
             and not isinstance(progress, bool)
             and progress > 0
-            and ((it + 1) % progress == 0 or delta < tol)
+            and ((it + 1) % progress == 0 or delta_f < tol)
         ):
-            print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta:.3e}")
+            print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta_f:.3e}")
 
-        if delta < tol:
+        if delta_f < tol:
             if pbar:
                 pbar.close()
             return r_next
@@ -219,7 +231,7 @@ def compute_publication_rank(
     if pbar:
         pbar.close()
     warnings.warn(
-        f"PapeRank did not converge within max_iter={max_iter} (last delta={delta:.3e}). Returning last iterate.",
+        f"PapeRank did not converge within max_iter={max_iter} (last delta={delta_f:.3e}). Returning last iterate.",
         RuntimeWarning,
         stacklevel=2,
     )
@@ -262,7 +274,14 @@ def compute_publication_rank_teleport(
     if not (0.0 <= alpha <= 1.0):
         raise ValueError("alpha must be in [0, 1]")
 
-    S = scipy.sparse.csr_matrix(stochastic_matrix, dtype=np.float64)
+    # Narrow Union for scipy.sparse.csr_matrix
+    if isinstance(stochastic_matrix, np.ndarray):
+        S = scipy.sparse.csr_matrix(stochastic_matrix, dtype=np.float64)
+    else:
+        spm = cast(scipy.sparse.spmatrix, stochastic_matrix)
+        # mypy-safe: CSR first, then dtype conversion
+        S = spm.tocsr().astype(np.float64, copy=False)
+
     # Validate values: finite and non-negative
     if S.data.size:
         if not np.all(np.isfinite(S.data)):
@@ -322,7 +341,7 @@ def compute_publication_rank_teleport(
                 progress = 10
 
     for it in range(max_iter):
-        r_link = ST @ r  # equals r @ S
+        r_link = np.asarray(ST @ r, dtype=np.float64).ravel()
         d_mass = float(r[dangling].sum()) if dangling.any() else 0.0
         r_next = alpha * r_link + alpha * d_mass * v + (1.0 - alpha) * v
         # Numerical guard: normalize
@@ -333,10 +352,8 @@ def compute_publication_rank_teleport(
             raise ValueError("Encountered non-positive total probability during iteration")
         r_next /= s
 
-        delta = np.linalg.norm(r_next - r, 1)
-
-        err = np.linalg.norm(r_next - r, 1)
-        err_f: float = float(err)
+        delta_f: float = float(np.linalg.norm(r_next - r, 1))
+        err_f: float = delta_f
 
         if callback is not None:
             callback(it + 1, err_f, r_next)
@@ -346,26 +363,26 @@ def compute_publication_rank_teleport(
                 pbar.close()
             return r_next
         if callback is not None:
-            should_stop = bool(callback(it + 1, delta, r_next))
+            should_stop = bool(callback(it + 1, delta_f, r_next))
             if should_stop:
                 if pbar:
                     pbar.update(1)
-                    pbar.set_postfix_str(f"delta={delta:.3e} (stopped)")
+                    pbar.set_postfix_str(f"delta={delta_f:.3e} (stopped)")
                     pbar.close()
                 return r_next
 
         if pbar:
             pbar.update(1)
-            pbar.set_postfix_str(f"delta={delta:.3e}")
+            pbar.set_postfix_str(f"delta={delta_f:.3e}")
         elif (
             isinstance(progress, int)
             and not isinstance(progress, bool)
             and progress > 0
-            and ((it + 1) % progress == 0 or delta < tol)
+            and ((it + 1) % progress == 0 or delta_f < tol)
         ):
-            print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta:.3e}")
+            print(f"[PapeRank] iter={it + 1}/{max_iter} delta={delta_f:.3e}")
 
-        if delta < tol:
+        if delta_f < tol:
             if pbar:
                 pbar.close()
             return r_next
@@ -374,7 +391,7 @@ def compute_publication_rank_teleport(
     if pbar:
         pbar.close()
     warnings.warn(
-        f"PapeRank (teleport) did not converge within max_iter={max_iter} (last delta={delta:.3e}). Returning last iterate.",
+        f"PapeRank (teleport) did not converge within max_iter={max_iter} (last delta={delta_f:.3e}). Returning last iterate.",
         RuntimeWarning,
         stacklevel=2,
     )
