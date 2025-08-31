@@ -608,7 +608,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         _ = f_out.getvalue()
         _ = f_err.getvalue()
 
-    def test_callback_invoked_and_early_stop(self):
+    def test_callback_invoked_and_early_stop_2(self):
         # 3-node graph with one dangling node (row 3)
         S = np.array(
             [
@@ -639,7 +639,7 @@ class TestPapeRankMatrix(unittest.TestCase):
             tol=0.0,  # ensure we don't stop due to tolerance
             max_iter=100,
             callback=cb,
-            progress=True, # also exercise progress handling with callback
+            progress=True,  # also exercise progress handling with callback
         )
 
         # Callback is invoked twice per iteration in the current implementation
@@ -711,7 +711,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         S = np.array(
             [
                 [-0.2, 1.2],  # sums to 1.0
-                [0.0, 1.0],   # sums to 1.0
+                [0.0, 1.0],  # sums to 1.0
             ],
             dtype=float,
         )
@@ -741,11 +741,10 @@ class TestPapeRankMatrix(unittest.TestCase):
         self.assertEqual(r.shape, (G.shape[0],))
         self.assertTrue(np.all(r >= -1e-15))
         self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
-    
+
     def test_compute_publication_rank_teleport_progress_int_prints(self):
         # Simple 2-node chain to trigger multiple iterations with progress printing
-        adj = np.array([[0.0, 1.0],
-                        [0.0, 0.0]], dtype=float)
+        adj = np.array([[0.0, 1.0], [0.0, 0.0]], dtype=float)
         S = adjacency_to_stochastic_matrix(adj)
 
         f_out, f_err = io.StringIO(), io.StringIO()
@@ -755,9 +754,9 @@ class TestPapeRankMatrix(unittest.TestCase):
                 r = compute_publication_rank_teleport(
                     S,
                     alpha=0.85,
-                    tol=1e-14,     # small tol to allow several iterations
+                    tol=1e-14,  # small tol to allow several iterations
                     max_iter=200,  # enough iterations to emit multiple progress lines
-                    progress=1,    # print every iteration
+                    progress=1,  # print every iteration
                 )
 
         out = f_out.getvalue()
@@ -780,9 +779,9 @@ class TestPapeRankMatrix(unittest.TestCase):
                 r = compute_publication_rank_teleport(
                     S,
                     alpha=0.85,
-                    tol=1e-16,     # tighter tol to force more iterations
+                    tol=1e-16,  # tighter tol to force more iterations
                     max_iter=200,
-                    progress=3,    # print on multiples of 3
+                    progress=3,  # print on multiples of 3
                 )
 
         out = f_out.getvalue()
@@ -790,7 +789,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         self.assertIn("[PapeRank] iter=3/", out)
         self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
 
-    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close(self):
+    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close_2(self):
         # Stub tqdm to exercise the progress='tqdm' branch and verify update/postfix/close.
         created = []
 
@@ -820,8 +819,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         sys.modules["tqdm"] = stub
         try:
             # Simple 2-node chain with a dangling node to force multiple iterations
-            adj = np.array([[0.0, 1.0],
-                            [0.0, 0.0]], dtype=float)
+            adj = np.array([[0.0, 1.0], [0.0, 0.0]], dtype=float)
             S = adjacency_to_stochastic_matrix(adj)
 
             with warnings.catch_warnings(record=True):
@@ -829,7 +827,7 @@ class TestPapeRankMatrix(unittest.TestCase):
                 r = compute_publication_rank_teleport(
                     S,
                     alpha=0.85,
-                    tol=1e-16,   # small tol to ensure we hit the pbar.update/set_postfix_str path
+                    tol=1e-16,  # small tol to ensure we hit the pbar.update/set_postfix_str path
                     max_iter=5,  # few iterations
                     progress="tqdm",
                 )
@@ -875,8 +873,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         stub.tqdm = fake_tqdm
         sys.modules["tqdm"] = stub
         try:
-            adj = np.array([[0.0, 1.0],
-                            [0.0, 0.0]], dtype=float)
+            adj = np.array([[0.0, 1.0], [0.0, 0.0]], dtype=float)
             S = adjacency_to_stochastic_matrix(adj)
 
             def cb(it, delta, r):
@@ -887,9 +884,9 @@ class TestPapeRankMatrix(unittest.TestCase):
                 r = compute_publication_rank_teleport(
                     S,
                     alpha=0.85,
-                    tol=0.0,       # avoid stopping by tolerance
+                    tol=0.0,  # avoid stopping by tolerance
                     max_iter=100,
-                    callback=cb,   # triggers early-stop path
+                    callback=cb,  # triggers early-stop path
                     progress="tqdm",
                 )
 
@@ -905,7 +902,7 @@ class TestPapeRankMatrix(unittest.TestCase):
             else:
                 sys.modules.pop("tqdm", None)
 
-    def test_callback_invoked_and_early_stop(self):
+    def test_callback_invoked_and_early_stop_1(self):
         # Exercise the two callback sites in compute_publication_rank_teleport:
         # - first callback (err_f) [lines 340-342]
         # - second callback (delta_f) with early stop [lines 351-353]
@@ -920,15 +917,13 @@ class TestPapeRankMatrix(unittest.TestCase):
 
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("ignore")
-            r = compute_publication_rank_teleport(
-                S, alpha=0.85, tol=0.0, max_iter=10, callback=cb, progress=False
-            )
+            r = compute_publication_rank_teleport(S, alpha=0.85, tol=0.0, max_iter=10, callback=cb, progress=False)
 
         # Should have invoked callback multiple times, including both sites
         self.assertGreaterEqual(call_counter["count"], 3)
         self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
 
-    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close(self):
+    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close_1(self):
         # Stub tqdm to exercise the pbar.update and pbar.set_postfix_str path [lines 387-389]
         created = []
 
@@ -960,9 +955,7 @@ class TestPapeRankMatrix(unittest.TestCase):
             S = adjacency_to_stochastic_matrix(np.eye(2, dtype=float))
             with warnings.catch_warnings(record=True):
                 warnings.simplefilter("ignore")
-                r = compute_publication_rank_teleport(
-                    S, alpha=0.85, tol=0.0, max_iter=3, progress="tqdm"
-                )
+                r = compute_publication_rank_teleport(S, alpha=0.85, tol=0.0, max_iter=3, progress="tqdm")
             self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
             self.assertGreaterEqual(len(created), 1)
             p = created[-1]
@@ -975,7 +968,7 @@ class TestPapeRankMatrix(unittest.TestCase):
                 sys.modules["tqdm"] = prev
             else:
                 sys.modules.pop("tqdm", None)
-    
+
     def test_compute_publication_rank_progress_true_falls_back_to_int_every_10(self):
         # Force the tqdm import to "fail" so the code falls back to printing every 10 iterations
         prev_tqdm = sys.modules.get("tqdm")
@@ -996,6 +989,7 @@ class TestPapeRankMatrix(unittest.TestCase):
                 sys.modules["tqdm"] = prev_tqdm
             else:
                 sys.modules.pop("tqdm", None)
-        
+
+
 if __name__ == "__main__":
     unittest.main()
