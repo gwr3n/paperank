@@ -2,11 +2,11 @@ import unittest
 from unittest.mock import patch
 
 from paperank.citation_crawler import (
+    clear_caches,
     collect_cited_recursive,
     collect_citing_recursive,
     crawl_citation_neighborhood,
     get_citation_neighborhood,
-    clear_caches,
 )
 
 
@@ -94,6 +94,7 @@ class TestCitationCrawler(unittest.TestCase):
         self.assertEqual(out[:2], ["U", "U1"])
         self.assertNotIn("V", out)
         self.assertNotIn("W", out)
+
 
 if __name__ == "__main__":
     unittest.main()

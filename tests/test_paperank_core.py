@@ -1,13 +1,20 @@
 import io
 import os
 import tempfile
-import warnings
 import unittest
-import numpy as np
+import warnings
 from unittest.mock import patch
 
-from paperank.paperank_core import rank, rank_and_save_publications_CSV, rank_and_save_publications_JSON
-from paperank.paperank_core import crawl_and_rank_bidirectional_neighborhood, crawl_and_rank_frontier
+import numpy as np
+
+from paperank.paperank_core import (
+    crawl_and_rank_bidirectional_neighborhood,
+    crawl_and_rank_frontier,
+    rank,
+    rank_and_save_publications_CSV,
+    rank_and_save_publications_JSON,
+)
+
 
 class TestPapeRankCore(unittest.TestCase):
     def setUp(self):
@@ -61,7 +68,8 @@ class TestPapeRankCore(unittest.TestCase):
             self.assertIn('"A ""Complex"" Title, With Commas"', text)
             self.assertIn('"Doe, John"', text)
             self.assertIn('"Alice\nBob"', text)
-    
+
+
 class TestPapeRankCoreCrawlers(unittest.TestCase):
     def test_rank_pipeline_and_debug_tqdm(self):
         # Arrange
@@ -75,9 +83,11 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
         fake_adj = FakeSparse((3, 3), 2)
         fake_S = FakeSparse((3, 3), 3)
 
-        with patch("paperank.paperank_core.build_citation_sparse_matrix") as p_build, \
-             patch("paperank.paperank_core.adjacency_to_stochastic_matrix") as p_adj2stoch, \
-             patch("paperank.paperank_core.compute_publication_rank_teleport") as p_pr:
+        with (
+            patch("paperank.paperank_core.build_citation_sparse_matrix") as p_build,
+            patch("paperank.paperank_core.adjacency_to_stochastic_matrix") as p_adj2stoch,
+            patch("paperank.paperank_core.compute_publication_rank_teleport") as p_pr,
+        ):
 
             p_build.return_value = (fake_adj, {"a": 0, "b": 1, "c": 2})
             p_adj2stoch.return_value = fake_S
@@ -88,7 +98,7 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
             res = rank(
                 doi_list,
                 alpha=0.9,
-                debug=True,            # should force progress="tqdm"
+                debug=True,  # should force progress="tqdm"
                 progress=False,
                 tol=1e-6,
                 max_iter=50,
@@ -116,9 +126,11 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
         doi = "10.1000/xyz.123"
         doi_filename = "10_1000_xyz_123"
 
-        with patch("paperank.paperank_core.get_citation_neighborhood") as p_neigh, \
-             patch("paperank.paperank_core.rank_and_save_publications_JSON") as p_save_json, \
-             patch("paperank.paperank_core.rank") as p_rank:
+        with (
+            patch("paperank.paperank_core.get_citation_neighborhood") as p_neigh,
+            patch("paperank.paperank_core.rank_and_save_publications_JSON") as p_save_json,
+            patch("paperank.paperank_core.rank") as p_rank,
+        ):
 
             p_neigh.return_value = ["a", "b"]
             p_rank.return_value = [("a", 0.7), ("b", 0.3)]
@@ -162,9 +174,11 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
         doi = "10.1/abc.def"
         doi_filename = "10_1_abc_def"
 
-        with patch("paperank.paperank_core.get_citation_neighborhood") as p_neigh, \
-             patch("paperank.paperank_core.rank_and_save_publications_CSV") as p_save_csv, \
-             patch("paperank.paperank_core.rank") as p_rank:
+        with (
+            patch("paperank.paperank_core.get_citation_neighborhood") as p_neigh,
+            patch("paperank.paperank_core.rank_and_save_publications_CSV") as p_save_csv,
+            patch("paperank.paperank_core.rank") as p_rank,
+        ):
             p_neigh.return_value = ["x", "y"]
             p_rank.return_value = [("x", 1.0), ("y", 0.5)]
 
@@ -186,9 +200,11 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
         doi = "10.1000/xyz.123"
         base = "10_1000_xyz_123"
 
-        with patch("paperank.paperank_core.crawl_citation_neighborhood") as p_crawl, \
-             patch("paperank.paperank_core.rank_and_save_publications_JSON") as p_save_json, \
-             patch("paperank.paperank_core.rank") as p_rank:
+        with (
+            patch("paperank.paperank_core.crawl_citation_neighborhood") as p_crawl,
+            patch("paperank.paperank_core.rank_and_save_publications_JSON") as p_save_json,
+            patch("paperank.paperank_core.rank") as p_rank,
+        ):
 
             p_crawl.return_value = ["p", "q", "r"]
             p_rank.return_value = [("p", 0.4), ("q", 0.35), ("r", 0.25)]
@@ -231,9 +247,11 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
     def test_crawl_and_rank_frontier_with_list_seeds_csv_and_debug_tqdm(self):
         seeds = ["a", "b", "a"]  # contains duplicate; should deduplicate to ["a", "b"]
 
-        with patch("paperank.paperank_core.crawl_citation_neighborhood") as p_crawl, \
-             patch("paperank.paperank_core.rank_and_save_publications_CSV") as p_save_csv, \
-             patch("paperank.paperank_core.rank") as p_rank:
+        with (
+            patch("paperank.paperank_core.crawl_citation_neighborhood") as p_crawl,
+            patch("paperank.paperank_core.rank_and_save_publications_CSV") as p_save_csv,
+            patch("paperank.paperank_core.rank") as p_rank,
+        ):
 
             p_crawl.return_value = ["u", "v"]
             p_rank.return_value = [("v", 0.6), ("u", 0.4)]
@@ -243,7 +261,7 @@ class TestPapeRankCoreCrawlers(unittest.TestCase):
                 steps=1,
                 alpha=0.85,
                 output_format="csv",
-                debug=True,    # should switch rank progress to "tqdm"
+                debug=True,  # should switch rank progress to "tqdm"
                 progress=True,
             )
 

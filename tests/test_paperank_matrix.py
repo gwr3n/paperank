@@ -1,7 +1,7 @@
 import io
 import unittest
-from contextlib import redirect_stdout, redirect_stderr
 import warnings
+from contextlib import redirect_stderr, redirect_stdout
 
 import numpy as np
 import scipy.sparse
@@ -578,12 +578,11 @@ class TestPapeRankMatrix(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, r"init must sum to a positive value"):
             compute_publication_rank_teleport(S, init=np.array([0.0, 0.0, 0.0], dtype=float))
-        
+
     def test_compute_publication_rank_teleport_progress_true(self):
         # 2-node graph with a dangling node (node 1)
         # 0 -> 1; 1 -> (no out-links)
-        adj = np.array([[0, 1],
-                        [0, 0]], dtype=float)
+        adj = np.array([[0, 1], [0, 0]], dtype=float)
         S = adjacency_to_stochastic_matrix(adj)
 
         # Capture any progress output (tqdm or print fallback)
@@ -649,6 +648,7 @@ class TestPapeRankMatrix(unittest.TestCase):
         self.assertEqual(r.shape, (3,))
         self.assertAlmostEqual(float(r.sum()), 1.0, places=12)
         self.assertTrue(np.all(r >= 0.0))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,7 @@ from unittest.mock import patch
 from paperank.citation_crawler import get_citation_neighborhood
 from paperank.citation_matrix import build_citation_sparse_matrix
 
+
 class TestCitationMatrix(unittest.TestCase):
     def setUp(self):
         self.test_doi = "10.1016/j.ejor.2016.12.001"
