@@ -7,6 +7,7 @@ from paperank.citation_crawler import (
     collect_citing_recursive,
     crawl_citation_neighborhood,
     get_citation_neighborhood,
+    _with_progress,  # added for testing tqdm path
 )
 
 
@@ -158,6 +159,52 @@ class TestCitationCrawler(unittest.TestCase):
         # 'B' is added at top level; 'C' is appended inside dfs before early return.
         self.assertEqual(out, ["B", "C"])
         self.assertNotIn("D", out)
+    
+    def test__with_progress_uses_tqdm_when_available(self):
+        import types
+
+        # Create a fake tqdm module with a callable 'tqdm' that records args
+        class DummyTqdm:
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, iterable, desc=None, leave=None):
+                items = list(iterable)
+                self.calls.append({"desc": desc, "leave": leave, "items": items})
+                for x in items:
+                    yield x
+
+        dummy = DummyTqdm()
+        fake_module = types.ModuleType("tqdm")
+        fake_module.tqdm = dummy
+
+        with patch.dict("sys.modules", {"tqdm": fake_module}):
+            data = [1, 2, 3]
+            wrapped = _with_progress(data, enabled=True, desc="My progress")
+            # Ensure it iterates the same items and used our dummy tqdm
+            self.assertEqual(list(wrapped), data)
+            self.assertTrue(dummy.calls, "tqdm should have been called")
+            self.assertEqual(dummy.calls[0]["desc"], "My progress")
+            self.assertEqual(dummy.calls[0]["leave"], False)
+            self.assertEqual(dummy.calls[0]["items"], data)
+
+    def test__with_progress_graceful_fallback_when_tqdm_missing(self):
+        # Force ImportError for tqdm to take the except path and return the original iterable
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "tqdm":
+                raise ImportError("forced-missing-tqdm")
+            return real_import(name, globals, locals, fromlist, level)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            data = [4, 5]
+            wrapped = _with_progress(data, enabled=True, desc="Ignored")
+            # Should return the original iterable unchanged
+            self.assertIs(wrapped, data)
+            self.assertEqual(list(wrapped), data)
 
 if __name__ == "__main__":
     unittest.main()
