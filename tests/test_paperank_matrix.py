@@ -1,4 +1,6 @@
 import io
+import sys
+import types
 import unittest
 import warnings
 from contextlib import redirect_stderr, redirect_stdout
@@ -739,6 +741,169 @@ class TestPapeRankMatrix(unittest.TestCase):
         self.assertEqual(r.shape, (G.shape[0],))
         self.assertTrue(np.all(r >= -1e-15))
         self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+    
+    def test_compute_publication_rank_teleport_progress_int_prints(self):
+        # Simple 2-node chain to trigger multiple iterations with progress printing
+        adj = np.array([[0.0, 1.0],
+                        [0.0, 0.0]], dtype=float)
+        S = adjacency_to_stochastic_matrix(adj)
+
+        f_out, f_err = io.StringIO(), io.StringIO()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("ignore")  # ignore convergence or runtime warnings for this test
+            with redirect_stdout(f_out), redirect_stderr(f_err):
+                r = compute_publication_rank_teleport(
+                    S,
+                    alpha=0.85,
+                    tol=1e-14,     # small tol to allow several iterations
+                    max_iter=200,  # enough iterations to emit multiple progress lines
+                    progress=1,    # print every iteration
+                )
+
+        out = f_out.getvalue()
+        # Should have printed PapeRank progress at least once
+        self.assertIn("[PapeRank] iter=", out)
+        self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+
+    def test_compute_publication_rank_teleport_progress_int_prints_on_multiples(self):
+        # 3-node chain: 0->1, 1->2; ensures more iterations before convergence
+        rows = np.array([0, 1])
+        cols = np.array([1, 2])
+        data = np.ones_like(rows, dtype=float)
+        A = scipy.sparse.csr_matrix((data, (rows, cols)), shape=(3, 3))
+        S = adjacency_to_stochastic_matrix(A)
+
+        f_out, f_err = io.StringIO(), io.StringIO()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("ignore")
+            with redirect_stdout(f_out), redirect_stderr(f_err):
+                r = compute_publication_rank_teleport(
+                    S,
+                    alpha=0.85,
+                    tol=1e-16,     # tighter tol to force more iterations
+                    max_iter=200,
+                    progress=3,    # print on multiples of 3
+                )
+
+        out = f_out.getvalue()
+        # Expect at least the third-iteration print
+        self.assertIn("[PapeRank] iter=3/", out)
+        self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+
+    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close(self):
+        # Stub tqdm to exercise the progress='tqdm' branch and verify update/postfix/close.
+        created = []
+
+        class DummyPbar:
+            def __init__(self, *args, **kwargs):
+                self.update_calls = 0
+                self.postfix = []
+                self.closed = False
+
+            def update(self, n):
+                self.update_calls += n
+
+            def set_postfix_str(self, s):
+                self.postfix.append(str(s))
+
+            def close(self):
+                self.closed = True
+
+        def fake_tqdm(*args, **kwargs):
+            p = DummyPbar(*args, **kwargs)
+            created.append(p)
+            return p
+
+        prev = sys.modules.get("tqdm")
+        stub = types.ModuleType("tqdm")
+        stub.tqdm = fake_tqdm
+        sys.modules["tqdm"] = stub
+        try:
+            # Simple 2-node chain with a dangling node to force multiple iterations
+            adj = np.array([[0.0, 1.0],
+                            [0.0, 0.0]], dtype=float)
+            S = adjacency_to_stochastic_matrix(adj)
+
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("ignore")  # ignore potential non-convergence warnings
+                r = compute_publication_rank_teleport(
+                    S,
+                    alpha=0.85,
+                    tol=1e-16,   # small tol to ensure we hit the pbar.update/set_postfix_str path
+                    max_iter=5,  # few iterations
+                    progress="tqdm",
+                )
+
+            self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+            self.assertGreaterEqual(len(created), 1)
+            p = created[-1]
+            self.assertGreaterEqual(p.update_calls, 1)
+            self.assertGreaterEqual(len(p.postfix), 1)
+            self.assertTrue(p.closed)  # closed on loop end (non-convergence or convergence)
+        finally:
+            if prev is not None:
+                sys.modules["tqdm"] = prev
+            else:
+                sys.modules.pop("tqdm", None)
+
+    def test_compute_publication_rank_teleport_progress_tqdm_callback_stopped(self):
+        # Stub tqdm and stop early via callback to exercise the '(stopped)' postfix path.
+        created = []
+
+        class DummyPbar:
+            def __init__(self, *args, **kwargs):
+                self.update_calls = 0
+                self.postfix = []
+                self.closed = False
+
+            def update(self, n):
+                self.update_calls += n
+
+            def set_postfix_str(self, s):
+                self.postfix.append(str(s))
+
+            def close(self):
+                self.closed = True
+
+        def fake_tqdm(*args, **kwargs):
+            p = DummyPbar(*args, **kwargs)
+            created.append(p)
+            return p
+
+        prev = sys.modules.get("tqdm")
+        stub = types.ModuleType("tqdm")
+        stub.tqdm = fake_tqdm
+        sys.modules["tqdm"] = stub
+        try:
+            adj = np.array([[0.0, 1.0],
+                            [0.0, 0.0]], dtype=float)
+            S = adjacency_to_stochastic_matrix(adj)
+
+            def cb(it, delta, r):
+                return it >= 2  # request early stop on second iteration
+
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("ignore")
+                r = compute_publication_rank_teleport(
+                    S,
+                    alpha=0.85,
+                    tol=0.0,       # avoid stopping by tolerance
+                    max_iter=100,
+                    callback=cb,   # triggers early-stop path
+                    progress="tqdm",
+                )
+
+            self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+            self.assertGreaterEqual(len(created), 1)
+            p = created[-1]
+            self.assertGreaterEqual(p.update_calls, 1)
+            self.assertTrue(any("(stopped)" in s for s in p.postfix))
+            self.assertTrue(p.closed)  # closed in early-stop branch
+        finally:
+            if prev is not None:
+                sys.modules["tqdm"] = prev
+            else:
+                sys.modules.pop("tqdm", None)
         
 if __name__ == "__main__":
     unittest.main()
