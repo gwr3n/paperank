@@ -54,6 +54,24 @@ Dependencies are managed via `pyproject.toml` and include:
 
 ---
 
+## Requirements and configuration
+
+- Python 3.8+ is recommended.
+- Set CROSSREF_MAILTO to help Crossref identify your traffic and improve reliability:
+
+  macOS/Linux (bash/zsh):
+  ```
+  export CROSSREF_MAILTO="your.email@example.com"
+  ```
+
+- Progress parameter (used across APIs): one of
+  - False: no progress
+  - True: basic progress (or fallback)
+  - 'tqdm': explicitly request tqdm progress bars
+  - int: print every N iterations/steps
+
+---
+
 ## Quick Start
 
 Here’s a minimal example to rank publications in a citation neighborhood:
@@ -125,8 +143,8 @@ results = crawl_and_rank_frontier(
 - `rank_and_save_publications_CSV`:  
   Save ranked results to a CSV file.
 
-- `get_citation_neighborhood`:  
-  Collects DOIs in the citation neighborhood of a target publication.
+- `crawl_citation_neighborhood`:  
+  Iteratively crawl 1-hop bidirectional neighborhoods and union results.
 
 ---
 
