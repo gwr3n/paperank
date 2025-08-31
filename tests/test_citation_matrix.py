@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from paperank.citation_crawler import get_citation_neighborhood
-from paperank.citation_matrix import build_citation_sparse_matrix, _cached_cited, _cached_citing
+from paperank.citation_matrix import _cached_cited, _cached_citing, build_citation_sparse_matrix
 
 
 class TestCitationMatrix(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestCitationMatrix(unittest.TestCase):
         self.assertEqual(matrix.shape, (1, 1))
         self.assertEqual(matrix.nnz, 0)
         self.assertIn(self.test_doi, mapping)
-    
+
     @patch("paperank.citation_matrix.get_cited_dois")
     def test_cached_cited_returns_tuple_and_uses_cache(self, mock_get_cited):
         mock_get_cited.return_value = {"cited_dois": ["10.1000/a", "10.1000/b"]}
@@ -91,9 +91,7 @@ class TestCitationMatrix(unittest.TestCase):
         mock_get_cited.return_value = {"cited_dois": []}
 
         # Act
-        matrix, mapping = build_citation_sparse_matrix(
-            [doi_a, doi_b], include_citing=True, max_workers=None, progress=False
-        )
+        matrix, mapping = build_citation_sparse_matrix([doi_a, doi_b], include_citing=True, max_workers=None, progress=False)
 
         # Assert: Edge should be from B -> A (row=B, col=A)
         idx_a = mapping[doi_a]
@@ -122,9 +120,7 @@ class TestCitationMatrix(unittest.TestCase):
         mock_get_cited.return_value = {"cited_dois": []}
 
         # Act
-        matrix, mapping = build_citation_sparse_matrix(
-            [doi_a, doi_b], include_citing=True, max_workers=None, progress=False
-        )
+        matrix, mapping = build_citation_sparse_matrix([doi_a, doi_b], include_citing=True, max_workers=None, progress=False)
 
         # Assert: Only edge B -> A should be present; C is ignored (not in mapping)
         idx_a = mapping[doi_a]
@@ -133,6 +129,7 @@ class TestCitationMatrix(unittest.TestCase):
         edges = set(zip(rows, cols))
         self.assertEqual(edges, {(idx_b, idx_a)})
         self.assertEqual(matrix.nnz, 1)
-        
+
+
 if __name__ == "__main__":
     unittest.main()
