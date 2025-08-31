@@ -95,6 +95,69 @@ class TestCitationCrawler(unittest.TestCase):
         self.assertNotIn("V", out)
         self.assertNotIn("W", out)
 
+    def test_collect_cited_recursive_flat_dfs_recurses(self):
+        # Graph: A -> [B]; B -> [C, D]
+        cited_graph = {
+            "A": ["B"],
+            "B": ["C", "D"],
+            "C": [],
+            "D": [],
+        }
+
+        def fake_get_cited_dois(doi: str):
+            return {"cited_dois": cited_graph.get(doi, [])}
+
+        clear_caches()
+        with patch("paperank.citation_crawler.get_cited_dois", side_effect=fake_get_cited_dois):
+            out = collect_cited_recursive("A", depth=3, flatten=True, progress=False)
+
+        # Expect dfs to recurse into B and collect C and D
+        self.assertEqual(out, ["B", "C", "D"])
+
+    def test_collect_cited_recursive_flat_max_nodes_inside_dfs(self):
+        # Graph: A -> [B]; B -> [E, F]; F -> [G]
+        # With max_nodes=3, dfs(B) visits E first, then before recursing into F,
+        # visited has reached the threshold inside the loop and returns early.
+        cited_graph = {
+            "A": ["B"],
+            "B": ["E", "F"],
+            "E": [],
+            "F": ["G"],
+            "G": [],
+        }
+
+        def fake_get_cited_dois(doi: str):
+            return {"cited_dois": cited_graph.get(doi, [])}
+
+        clear_caches()
+        with patch("paperank.citation_crawler.get_cited_dois", side_effect=fake_get_cited_dois):
+            out = collect_cited_recursive("A", depth=3, flatten=True, max_nodes=3, progress=False)
+
+        # 'B' (top-level), then 'E'; 'F' is added to out but not recursed into due to early return
+        self.assertEqual(out, ["B", "E", "F"])
+        self.assertNotIn("G", out)
+
+    def test_collect_cited_recursive_flat_max_nodes_return_before_children(self):
+        # Graph: A -> [B]; B -> [C]; C -> [D]
+        # With max_nodes=2, dfs(B) will add B to visited, then append C to out,
+        # and return early before recursing into C.
+        cited_graph = {
+            "A": ["B"],
+            "B": ["C"],
+            "C": ["D"],
+            "D": [],
+        }
+
+        def fake_get_cited_dois(doi: str):
+            return {"cited_dois": cited_graph.get(doi, [])}
+
+        clear_caches()
+        with patch("paperank.citation_crawler.get_cited_dois", side_effect=fake_get_cited_dois):
+            out = collect_cited_recursive("A", depth=3, flatten=True, max_nodes=2, progress=False)
+
+        # 'B' is added at top level; 'C' is appended inside dfs before early return.
+        self.assertEqual(out, ["B", "C"])
+        self.assertNotIn("D", out)
 
 if __name__ == "__main__":
     unittest.main()
