@@ -1,16 +1,23 @@
 from functools import lru_cache
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
+from typing import Dict, Iterable, List, Optional, Set, TypeVar, Union, cast
 
 from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
 from .types import ProgressType
 
-try:
-    from tqdm import tqdm as _tqdm  # optional
-except Exception:
-    _tqdm = None  # type: ignore[assignment]
-# A safely-typed tqdm alias: Optional callable (guarded before use)
-tqdm_progress: Optional[Callable[..., Iterable[Any]]] = _tqdm
+T = TypeVar("T")
+
+
+def _with_progress(iterable: Iterable[T], enabled: ProgressType, desc: str) -> Iterable[T]:
+    """Wrap iterable with tqdm if requested and available; otherwise return iterable unchanged."""
+    if enabled is True or enabled == "tqdm":
+        try:
+            from tqdm import tqdm as _tqdm
+
+            return cast(Iterable[T], _tqdm(iterable, desc=desc, leave=False))
+        except Exception:
+            pass
+    return iterable
 
 
 @lru_cache(maxsize=200_000)
@@ -95,9 +102,7 @@ def collect_cited_recursive(
                     return
                 dfs(x, remaining - 1)
 
-        iterable = cited_dois
-        if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-            iterable = tqdm_progress(cited_dois, desc=f"Depth {depth} citations for {doi}", leave=False)
+        iterable = _with_progress(cited_dois, progress, f"Depth {depth} citations for {doi}")
         for c in iterable:
             if max_nodes is not None and len(visited) >= max_nodes:
                 break
@@ -108,11 +113,12 @@ def collect_cited_recursive(
         return out
     else:
         result: Dict[str, List[str]] = {doi: cited_dois}
-        iterable = cited_dois
-        if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-            iterable = tqdm_progress(cited_dois, desc=f"Depth {depth} citations for {doi}", leave=False)
+        iterable = _with_progress(cited_dois, progress, f"Depth {depth} citations for {doi}")
         for c in iterable:
-            subtree = collect_cited_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress)
+            subtree = cast(
+                Dict[str, List[str]],
+                collect_cited_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress),
+            )
             result.update(subtree)
         return result
 
@@ -173,9 +179,7 @@ def collect_citing_recursive(
                     return
                 dfs(x, remaining - 1)
 
-        iterable = citing_dois
-        if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-            iterable = tqdm_progress(citing_dois, desc=f"Depth {depth} citing for {doi}", leave=False)
+        iterable = _with_progress(citing_dois, progress, f"Depth {depth} citing for {doi}")
         for c in iterable:
             if max_nodes is not None and len(visited) >= max_nodes:
                 break
@@ -186,11 +190,12 @@ def collect_citing_recursive(
         return out
     else:
         result: Dict[str, List[str]] = {doi: citing_dois}
-        iterable = citing_dois
-        if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-            iterable = tqdm_progress(citing_dois, desc=f"Depth {depth} citing for {doi}", leave=False)
+        iterable = _with_progress(citing_dois, progress, f"Depth {depth} citing for {doi}")
         for c in iterable:
-            subtree = collect_citing_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress)
+            subtree = cast(
+                Dict[str, List[str]],
+                collect_citing_recursive(c, depth - 1, visited, flatten=False, max_nodes=max_nodes, progress=progress),
+            )
             result.update(subtree)
         return result
 
@@ -259,9 +264,7 @@ def crawl_citation_neighborhood(
     def one_hop(seeds: List[str]) -> List[str]:
         out: List[str] = []
         seen: Set[str] = set()
-        iterable = seeds
-        if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-            iterable = tqdm_progress(seeds, desc="Crawling seeds", leave=False)
+        iterable = _with_progress(seeds, progress, "Crawling seeds")
         for d in iterable:
             lst = get_citation_neighborhood(d, 1, 1, progress=False)
             for x in lst:
@@ -272,9 +275,7 @@ def crawl_citation_neighborhood(
         # Apply independent filters: min_year and min_citations
         if min_year is not None or min_citations is not None:
             filtered: List[str] = []
-            iterable_filter = out
-            if (progress is True or progress == "tqdm") and tqdm_progress is not None:
-                iterable_filter = tqdm_progress(out, desc="Filtering DOIs", leave=False)
+            iterable_filter = _with_progress(out, progress, "Filtering DOIs")
             for doi_item in iterable_filter:
                 drop = False
 
