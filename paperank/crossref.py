@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 from threading import local
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -219,10 +219,17 @@ def extract_authors_title_year(meta: Dict[str, Any]) -> Tuple[List[str], str, Op
         return None
 
     # Accept both envelope and raw message dict
-    msg: Dict[str, Any] = {}
+    msg: Dict[str, Any]
     if isinstance(meta, dict):
-        msg = meta.get("message") if isinstance(meta.get("message"), dict) else meta
-    m: Dict[str, Any] = msg if isinstance(msg, dict) else {}
+        val = meta.get("message")
+        if isinstance(val, dict):
+            msg = val
+        else:
+            msg = meta
+    else:
+        msg = {}
+
+    m: Dict[str, Any] = msg
 
     # Authors
     authors_list: List[str] = []

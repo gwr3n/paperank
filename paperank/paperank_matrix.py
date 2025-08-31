@@ -180,6 +180,16 @@ def compute_publication_rank(
 
         delta = np.linalg.norm(r_next - r, 1)
 
+        err = np.linalg.norm(r_next - r, 1)
+        err_f: float = float(err)
+
+        if callback is not None:
+            callback(it + 1, err_f, r_next)
+
+        if err_f < tol:
+            if pbar:
+                pbar.close()
+            return r_next
         if callback is not None:
             should_stop = bool(callback(it + 1, delta, r_next))
             if should_stop:
@@ -325,6 +335,16 @@ def compute_publication_rank_teleport(
 
         delta = np.linalg.norm(r_next - r, 1)
 
+        err = np.linalg.norm(r_next - r, 1)
+        err_f: float = float(err)
+
+        if callback is not None:
+            callback(it + 1, err_f, r_next)
+
+        if err_f < tol:
+            if pbar:
+                pbar.close()
+            return r_next
         if callback is not None:
             should_stop = bool(callback(it + 1, delta, r_next))
             if should_stop:
