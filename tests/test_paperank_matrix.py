@@ -637,7 +637,7 @@ class TestPapeRankMatrix(unittest.TestCase):
             tol=0.0,  # ensure we don't stop due to tolerance
             max_iter=100,
             callback=cb,
-            progress=False,
+            progress=True, # also exercise progress handling with callback
         )
 
         # Callback is invoked twice per iteration in the current implementation
