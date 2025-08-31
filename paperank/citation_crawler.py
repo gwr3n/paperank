@@ -253,7 +253,7 @@ def crawl_citation_neighborhood(
         if (progress is True or progress == 'tqdm') and tqdm is not None:
             iterable = tqdm(seeds, desc="Crawling seeds", leave=False)
         for d in iterable:
-            lst = get_citation_neighborhood(d, 1, 1, progress=progress)
+            lst = get_citation_neighborhood(d, 1, 1, progress=False)
             for x in lst:
                 if x not in seen:
                     seen.add(x)
