@@ -904,6 +904,98 @@ class TestPapeRankMatrix(unittest.TestCase):
                 sys.modules["tqdm"] = prev
             else:
                 sys.modules.pop("tqdm", None)
+
+    def test_callback_invoked_and_early_stop(self):
+        # Exercise the two callback sites in compute_publication_rank_teleport:
+        # - first callback (err_f) [lines 340-342]
+        # - second callback (delta_f) with early stop [lines 351-353]
+        S = adjacency_to_stochastic_matrix(np.eye(3, dtype=float))
+
+        call_counter = {"count": 0}
+
+        def cb(iteration, delta, r):
+            call_counter["count"] += 1
+            # Request early stop starting from iteration 2 (handled on the second callback site)
+            return iteration >= 2
+
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("ignore")
+            r = compute_publication_rank_teleport(
+                S, alpha=0.85, tol=0.0, max_iter=10, callback=cb, progress=False
+            )
+
+        # Should have invoked callback multiple times, including both sites
+        self.assertGreaterEqual(call_counter["count"], 3)
+        self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+
+    def test_compute_publication_rank_teleport_progress_tqdm_updates_and_close(self):
+        # Stub tqdm to exercise the pbar.update and pbar.set_postfix_str path [lines 387-389]
+        created = []
+
+        class DummyPbar:
+            def __init__(self, *args, **kwargs):
+                self.update_calls = 0
+                self.postfix = []
+                self.closed = False
+
+            def update(self, n):
+                self.update_calls += n
+
+            def set_postfix_str(self, s):
+                self.postfix.append(str(s))
+
+            def close(self):
+                self.closed = True
+
+        def fake_tqdm(*args, **kwargs):
+            p = DummyPbar(*args, **kwargs)
+            created.append(p)
+            return p
+
+        prev = sys.modules.get("tqdm")
+        stub = types.ModuleType("tqdm")
+        stub.tqdm = fake_tqdm
+        sys.modules["tqdm"] = stub
+        try:
+            S = adjacency_to_stochastic_matrix(np.eye(2, dtype=float))
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("ignore")
+                r = compute_publication_rank_teleport(
+                    S, alpha=0.85, tol=0.0, max_iter=3, progress="tqdm"
+                )
+            self.assertTrue(np.isclose(r.sum(), 1.0, atol=1e-12))
+            self.assertGreaterEqual(len(created), 1)
+            p = created[-1]
+            # Expect at least one update and postfix call
+            self.assertGreaterEqual(p.update_calls, 1)
+            self.assertGreaterEqual(len(p.postfix), 1)
+            self.assertTrue(p.closed)
+        finally:
+            if prev is not None:
+                sys.modules["tqdm"] = prev
+            else:
+                sys.modules.pop("tqdm", None)
+    
+    def test_compute_publication_rank_progress_true_falls_back_to_int_every_10(self):
+        # Force the tqdm import to "fail" so the code falls back to printing every 10 iterations
+        prev_tqdm = sys.modules.get("tqdm")
+        sys.modules["tqdm"] = types.ModuleType("tqdm")  # no 'tqdm' attr -> ImportError on "from tqdm import tqdm"
+        try:
+            S = np.eye(2, dtype=float)  # already row-stochastic
+            buf_out, buf_err = io.StringIO(), io.StringIO()
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("ignore")  # ignore non-convergence warning
+                with redirect_stdout(buf_out), redirect_stderr(buf_err):
+                    # tol=0.0 prevents early return so we hit the print branch; max_iter>=10 to see the print
+                    compute_publication_rank(S, tol=0.0, max_iter=11, progress=True)
+            out = buf_out.getvalue()
+            # Fallback should print on multiples of 10
+            self.assertIn("[PapeRank] iter=10/11", out)
+        finally:
+            if prev_tqdm is not None:
+                sys.modules["tqdm"] = prev_tqdm
+            else:
+                sys.modules.pop("tqdm", None)
         
 if __name__ == "__main__":
     unittest.main()
