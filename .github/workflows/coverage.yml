@@ -25,7 +25,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Run tests with coverage (unittest)
         run: |
-          python -m coverage run --source=paperank -m unittest discover -v
+          python -m coverage run --source=paperank -m unittest discover -v -s tests -p 'test_*.py'
           python -m coverage xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
