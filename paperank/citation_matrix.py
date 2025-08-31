@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, TypeVar, cast
 
 import numpy as np
 import scipy.sparse as sp
@@ -10,10 +10,30 @@ from .doi_utils import normalize_doi
 from .open_citations import get_citing_dois
 from .types import ProgressType
 
-try:
-    from tqdm import tqdm  # optional
-except Exception:
-    tqdm = None
+T = TypeVar("T")
+
+def _with_progress(
+    iterable: Iterable[T],
+    enabled: ProgressType,
+    desc: str,
+    total: Optional[int] = None,
+    unit: Optional[str] = None,
+) -> Iterable[T]:
+    """
+    Wrap iterable with tqdm if requested and available; otherwise return iterable unchanged.
+    """
+    if enabled is True or enabled == "tqdm":
+        try:
+            from tqdm import tqdm as _tqdm
+            kwargs: Dict[str, Any] = {"desc": desc, "leave": False}
+            if total is not None:
+                kwargs["total"] = total
+            if unit is not None:
+                kwargs["unit"] = unit
+            return cast(Iterable[T], _tqdm(iterable, **kwargs))
+        except Exception:
+            pass
+    return iterable
 
 
 @lru_cache(maxsize=200_000)
@@ -111,12 +131,16 @@ def build_citation_sparse_matrix(
     results: List[Tuple[str, Tuple[str, ...], Tuple[str, ...]]] = []
     if max_workers and max_workers > 1:
         workers = min(max_workers, max(1, len(doi_list)))
-        pbar = None
+        pbar: Any = None
         try:
             with ThreadPoolExecutor(max_workers=workers) as ex:
                 futures = {ex.submit(_job, d): d for d in doi_list}
-                if (progress is True or progress == "tqdm") and tqdm is not None:
-                    pbar = tqdm(total=len(futures), desc="Fetching citations", unit="doi", leave=False)
+                if progress is True or progress == "tqdm":
+                    try:
+                        from tqdm import tqdm as _tqdm
+                        pbar = _tqdm(total=len(futures), desc="Fetching citations", unit="doi", leave=False)
+                    except Exception:
+                        pbar = None
                 for fut in as_completed(futures):
                     try:
                         results.append(fut.result())
@@ -130,9 +154,7 @@ def build_citation_sparse_matrix(
             if pbar:
                 pbar.close()
     else:
-        iterable = doi_list
-        if (progress is True or progress == "tqdm") and tqdm is not None:
-            iterable = tqdm(doi_list, desc="Fetching citations", unit="doi", leave=False)
+        iterable = _with_progress(doi_list, progress, desc="Fetching citations", unit="doi")
         for d in iterable:
             try:
                 results.append(_job(d))
@@ -140,7 +162,7 @@ def build_citation_sparse_matrix(
                 results.append((d, tuple(), tuple()))
 
     # Build edge list (deduplicated) and construct sparse matrix in one shot
-    edges: set = set()
+    edges: Set[Tuple[int, int]] = set()
     for doi, cited, citing in results:
         i = doi_to_idx.get(doi)
         if i is None:
@@ -160,7 +182,10 @@ def build_citation_sparse_matrix(
     if not edges:
         return sp.csr_matrix((n, n), dtype=np.int8), doi_to_idx
 
-    rows, cols = zip(*edges)
+    rows_t, cols_t = zip(*edges)
+    # Ensure index arrays are numpy integer arrays to satisfy scipy/mypy
+    rows = np.asarray(rows_t, dtype=np.int64)
+    cols = np.asarray(cols_t, dtype=np.int64)
     data = np.ones(len(edges), dtype=np.int8)
     matrix = sp.coo_matrix((data, (rows, cols)), shape=(n, n), dtype=np.int8).tocsr()
     return matrix, doi_to_idx
