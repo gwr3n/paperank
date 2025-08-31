@@ -33,5 +33,7 @@ jobs:
           files: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}  # not required for public repos
+        # If you install the Codecov GitHub App, no token is needed.
+        # Otherwise, add:
+        # env:
+        #   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
