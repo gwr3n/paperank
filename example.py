@@ -21,14 +21,14 @@ This example is intended for demonstration, validation, and practical testing of
 It can be adapted for batch analysis, integration into larger workflows, or as a template for custom
 """
 
-from paperank.paperank_core import crawl_and_rank
+from paperank.paperank_core import crawl_and_rank_bidirectional_neighborhood, crawl_and_rank_frontier
 
 
-def main():
+def main_crawl_and_rank_bidirectional_neighborhood():
     test_doi = "10.1016/j.ejor.2005.01.053"
     output_format = "json"  # Change to "csv" as needed
     # Note: teleport vector must match the number of nodes; None ⇒ uniform teleport.
-    crawl_and_rank(
+    crawl_and_rank_bidirectional_neighborhood(
         doi=test_doi,
         forward_steps=2,
         backward_steps=2,
@@ -41,6 +41,23 @@ def main():
         teleport=None,
     )
 
+def main_crawl_and_rank_frontier():
+    test_doi = "10.1016/j.ejor.2005.01.053"
+    output_format = "json"  # Change to "csv" as needed
+    # Note: teleport vector must match the number of nodes; None ⇒ uniform teleport.
+    crawl_and_rank_frontier(
+        doi=test_doi,
+        steps=2,
+        # min_year=2000,
+        # min_citations=5,
+        alpha=0.85,
+        output_format=output_format,
+        debug=False,
+        progress=True,
+        tol=1e-12,
+        max_iter=20000,
+        teleport=None,
+    )
 
 if __name__ == "__main__":
-    main()
+    main_crawl_and_rank_frontier()

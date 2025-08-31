@@ -24,7 +24,8 @@ Submodules:
 """
 
 from .paperank_core import (
-    crawl_and_rank,
+    crawl_and_rank_bidirectional_neighborhood,
+    crawl_and_rank_frontier,
     rank,
     rank_and_save_publications_JSON,
     rank_and_save_publications_CSV,

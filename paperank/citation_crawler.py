@@ -1,5 +1,5 @@
 from typing import Set, Dict, List, Any, Optional, Union, Literal
-from .crossref import get_cited_dois
+from .crossref import get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
 try:
     from tqdm import tqdm  # optional
@@ -210,6 +210,127 @@ def get_citation_neighborhood(
     cited = collect_cited_recursive(doi, depth=backward_steps, flatten=True, progress=progress)
     result = [doi] + [d for d in citing if d != doi] + [d for d in cited if d != doi]
     result = list(dict.fromkeys(result))  # Deduplicate, preserve order
+    return result
+
+def crawl_citation_neighborhood(
+        doi: List[str], 
+        steps: int = 1, 
+        min_year: Optional[int] = None,
+        min_citations: Optional[int] = None,
+        progress: ProgressType = True) -> List[str]:
+    """
+    Crawl citation neighborhoods iteratively.
+
+    Behavior:
+    - steps == 1:
+      * if doi has one element: identical to get_citation_neighborhood(doi[0], 1, 1)
+      * if doi has multiple elements: union of get_citation_neighborhood(d, 1, 1) for all d
+    - steps > 1:
+      * Let S0 = crawl_citation_neighborhood(doi, 1)
+        S1 = crawl_citation_neighborhood(S0, 1)
+        ...
+        S_{steps-1} similarly;
+        Return the union (deduplicated) of S0..S_{steps-1}, preserving order.
+    
+    Args:
+        doi: List of starting DOIs.
+        steps: Number of iterative crawling steps.
+        progress: If True and tqdm is available, show progress bars during fetching.
+    
+    Returns:
+        List of unique DOIs in the crawled neighborhood.
+
+    Note: if steps < 1, returns an empty list.
+    """
+    if steps < 1:
+        return []
+
+    # Compute the union (deduped, order-preserving) of 1-hop neighborhoods
+    def one_hop(seeds: List[str]) -> List[str]:
+        out: List[str] = []
+        seen: Set[str] = set()
+        iterable = seeds
+        if (progress is True or progress == 'tqdm') and tqdm is not None:
+            iterable = tqdm(seeds, desc="Crawling seeds", leave=False)
+        for d in iterable:
+            lst = get_citation_neighborhood(d, 1, 1, progress=progress)
+            for x in lst:
+                if x not in seen:
+                    seen.add(x)
+                    out.append(x)
+        
+        # Apply independent filters: min_year and min_citations
+        if min_year is not None or min_citations is not None:
+            def _extract_year(meta: Dict[str, Any]) -> Optional[int]:
+                # Prefer 'issued', then 'published-print', 'published-online', 'published'
+                def _first_year(key: str) -> Optional[int]:
+                    v = meta.get(key)
+                    if isinstance(v, dict):
+                        dp = v.get("date-parts")
+                        if isinstance(dp, list) and dp and isinstance(dp[0], list) and dp[0]:
+                            try:
+                                return int(dp[0][0])
+                            except Exception:
+                                return None
+                    return None
+                return (
+                    _first_year("issued")
+                    or _first_year("published-print")
+                    or _first_year("published-online")
+                    or _first_year("published")
+                )
+
+            filtered: List[str] = []
+            iterable_filter = out
+            if (progress is True or progress == 'tqdm') and tqdm is not None:
+                iterable_filter = tqdm(out, desc="Filtering DOIs", leave=False)
+            for doi_item in iterable_filter:
+                drop = False
+
+                # Filter by publication year (keep only year >= min_year if known)
+                if min_year is not None:
+                    try:
+                        meta = get_work_metadata(doi_item) or {}
+                    except Exception:
+                        meta = {}
+                    year_val: Optional[int] = _extract_year(meta)
+                    if year_val is not None and year_val < min_year:
+                        drop = True
+
+                # Filter by citation count (keep only >= min_citations)
+                if not drop and min_citations is not None:
+                    try:
+                        citations_count = len(_get_citing_list(doi_item))
+                    except Exception:
+                        citations_count = 0
+                    if citations_count < min_citations:
+                        drop = True
+
+                if not drop:
+                    filtered.append(doi_item)
+            out = filtered
+
+        return out
+
+    # Step 0
+    seeds = list(dict.fromkeys(doi))  # dedupe input seeds, preserve order
+    step_lists: List[List[str]] = []
+    current = one_hop(seeds)
+    step_lists.append(current)
+
+    # Steps 1..(steps-1)
+    for _ in range(1, steps):
+        current = one_hop(current)
+        step_lists.append(current)
+
+    # Union across all step lists, preserving first-seen order
+    result: List[str] = []
+    seen_total: Set[str] = set()
+    for lst in step_lists:
+        for x in lst:
+            if x not in seen_total:
+                seen_total.add(x)
+                result.append(x)
     return result
 
 # New: cache management
