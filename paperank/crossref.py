@@ -28,7 +28,7 @@ def _session() -> requests.Session:
     )
     s.mount("https://", HTTPAdapter(max_retries=retries))
     email = os.environ.get("CROSSREF_MAILTO")
-    ua = f"paperank/0.1 (+https://github.com/gwr3n/paperank)"
+    ua = "paperank/0.1 (+https://github.com/gwr3n/paperank)"
     if email:
         ua = f"paperank/0.1 (mailto:{email}; +https://github.com/gwr3n/paperank)"
     s.headers.update(

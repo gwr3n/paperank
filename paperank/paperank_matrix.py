@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import scipy.sparse

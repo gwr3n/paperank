@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
 from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
