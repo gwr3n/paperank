@@ -1,9 +1,9 @@
+from functools import lru_cache
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
+
 from .crossref import extract_authors_title_year, get_cited_dois, get_work_metadata
 from .open_citations import get_citing_dois
 from .types import ProgressType
-
-from functools import lru_cache
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
 try:
     from tqdm import tqdm as _tqdm  # optional
@@ -11,6 +11,7 @@ except Exception:
     _tqdm = None  # type: ignore[assignment]
 # A safely-typed tqdm alias: Optional callable (guarded before use)
 tqdm: Optional[Callable[..., Iterable[Any]]] = _tqdm
+
 
 @lru_cache(maxsize=200_000)
 def _cached_cited(doi: str) -> tuple:
