@@ -1,6 +1,6 @@
 [project]
 name = "paperank"
-version = "0.2.3"
+version = "0.3.0"
 description = "A publication ranking and citation network analysis tools."
 authors = [
     { name = "Roberto Rossi", email = "robros@gmail.com" }
