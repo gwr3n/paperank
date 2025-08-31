@@ -33,5 +33,5 @@ jobs:
           files: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
-        # env:
-          # CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}  # not required for public repos
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}  # not required for public repos
