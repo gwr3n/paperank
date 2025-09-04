@@ -57,3 +57,14 @@ line_length = 127
 [tool.flake8]
 max-line-length = 127
 extend-ignore = ["E203", "W503"]
+
+[tool.ruff]
+line-length = 127
+target-version = "py311"
+
+[tool.ruff.lint]
+# Core Flake8 rules + import sorting
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["paperank"]
