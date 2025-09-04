@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from paperank.citation_crawler import _with_progress  # added for testing tqdm path
 from paperank.citation_crawler import (
+    _with_progress,  # added for testing tqdm path
     clear_caches,
     collect_cited_recursive,
     collect_citing_recursive,
