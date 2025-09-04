@@ -7,7 +7,7 @@ Core package badges:
 
 Quality and tooling:
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black) [![Ruff](https://img.shields.io/badge/lint-ruff-1f79ff)](https://github.com/astral-sh/ruff) 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000?logo=python)](https://github.com/psf/black) [![Ruff](https://img.shields.io/badge/lint-ruff-1f79ff?logo=python)](https://github.com/astral-sh/ruff) [![mypy](https://img.shields.io/badge/type--checked-mypy-blue?logo=python)](https://github.com/python/mypy)
 
 <!-- [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/gwr3n/paperank?label=openssf%20scorecard)](https://securityscorecards.dev/viewer/?uri=github.com/gwr3n/paperank) -->
 
